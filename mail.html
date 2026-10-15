@@ -382,6 +382,23 @@ select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-righ
 .vnow{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:2;pointer-events:none}
 .vg-wrap{overflow:hidden}
 .vg-sum{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
+/* カレンダー：空き枠にカーソルを置くと、入れる場所と内容が見える */
+.cal-ghost{position:absolute;top:4px;height:38px;border:1.5px dashed var(--accent);background:var(--accent-soft);border-radius:7px;font-size:12px;line-height:1.3;padding:3px 7px;pointer-events:none;color:var(--accent-text);white-space:nowrap;overflow:hidden;z-index:1}
+.cal-ghost b{display:block;font-size:12.5px}
+/* 接客できる人数：控えめに。足りない時間だけ色をつける */
+.frees{background:var(--surface)}
+.frees span{position:absolute;top:0;bottom:0;display:grid;place-items:center;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;border-radius:0}
+.frees .ok{background:none;color:var(--muted);font-weight:500}.frees .warn{background:var(--warn-soft);color:var(--warn);font-weight:700}.frees .bad{background:var(--danger-soft);color:var(--danger);font-weight:700}
+.trow.freerow{border-bottom:1px solid var(--line)}
+.trow.freerow .tlab{padding-block:4px;font-size:12px;color:var(--muted);font-weight:600}
+.trow.freerow .tlab small{font-size:11px}
+/* 成約 */
+.pill.won{background:#8a5a00;color:#fff}
+:root[data-look="b"] .pill.won{background:#6b4a00}
+.lrow.won{background:#fffaf0}
+.wonbar{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:10px 16px;border-radius:var(--r);background:#fff6e0;border:1px solid #f0d9a0;font-size:13.5px;margin-bottom:12px}
+.wonbar b{font-weight:700}
+.wonbar .pill{margin-right:4px}
 /* ログイン */
 .login{max-width:380px;margin:12vh auto 0;padding:28px 26px;display:grid;gap:12px}
 .login h1{font-size:20px;display:flex;align-items:center;gap:10px}
@@ -804,7 +821,7 @@ const visOf=q=>q.vis||(q.vis={props:'',result:'',note:''});
 function appOf(q){
   if(q.app)return q.app;
   const m=/^(.*?)\s*(\d{2,4})?（.*?([\d.]+)万円）$/.exec(q.property||'');
-  return q.app={bld:m?m[1].trim():(q.property||''),room:m&&m[2]?m[2]:'',rent:m?Math.round(parseFloat(m[3])*10000):'',fee:'',applied:'',movein:'',contract:'',comm:q.amount?Math.round(q.amount*10000):'',ad:'',screen:''};
+  return q.app={bld:m?m[1].trim():(q.property||''),room:m&&m[2]?m[2]:'',rent:m?Math.round(parseFloat(m[3])*10000):'',fee:'',applied:'',movein:'',contract:'',comm:q.amount?Math.round(q.amount*10000):'',ad:'',screen:'',takken:''};
 }
 /* 来店の回数。終わった来店は pv にためる。2回目からの来店が「再来」 */
 const pastV=q=>q.pv||(q.pv=[]);
@@ -835,7 +852,7 @@ function reason(q){
 const needs=q=>{const r=reason(q);return !!r&&r.key!=='visit'};
 function nextCell(q){
   if(q.closed) return {t:'終了（'+q.closed+'）',tone:''};
-  if(q.stage===5) return {t:'—',tone:''};
+  if(q.stage===5){const a=q.app||{};const parts=[a.contract?'契約 '+fmtD(ymd(a.contract)):'',a.movein?'入居 '+fmtD(ymd(a.movein)):'',a.takken?'宅建士 '+sname(+a.takken):''].filter(Boolean);return {t:parts.join('・')||'成約',tone:''}}
   if(q.reply) return {t:'返信あり',tone:'danger'};
   const v=openVisit(q), r=reason(q);
   if(v){const past=v.at.getTime()+v.dur*MIN<Date.now();
@@ -851,7 +868,7 @@ const sub=q=>q.property||[q.wish.area,q.wish.layout,q.wish.rent?('〜'+q.wish.re
 const repeatN=q=>q.ck?DB.filter(x=>x.ck===q.ck).length:1;
 function stagePill(q){
   if(q.closed) return '<span class="pill st">終了</span>';
-  const c=q.stage===0?'danger':q.stage===5?'solid':q.stage===4?'ok':'accent';
+  const c=q.stage===0?'danger':q.stage===5?'won':q.stage===4?'ok':'accent';
   return `<span class="pill st ${c}">${STAGES[q.stage]}</span>`;
 }
 const fuDone=q=>q.acts.reduce((m,a)=>Math.max(m,a.fu||0),0);
@@ -959,6 +976,7 @@ function renderSide(){
     +`<div class="navlab" style="margin-top:14px">ほかのアプリ</div>`+Object.entries(APPS).filter(([k])=>k!==APP).map(([k,a])=>`<a href="${a.url}" title="${a.name}を開く">${IC[a.ic]}<span>${a.name}</span></a>`).join('');
 }
 function render(){
+  if(ghostEl){ghostEl.remove();ghostEl=null}
   persist();
   document.documentElement.dataset.look=state.look;
   renderSide();
@@ -1014,7 +1032,7 @@ function kpisHTML(){
 function rowHTML(q){
   const nx=nextCell(q), open=state.rec===q.id, showShop=scopeShop()==null, showH=state.hist||open||hOpen.has(q.id);
   const lc=lastContact(q), own=q.owner?`<span class="av xs a${q.owner%6}" aria-hidden="true">${esc(sname(q.owner)[0])}</span>${esc(sname(q.owner))}`:lc&&lc.who?`<span class="sub">前回 ${esc(sname(lc.who))}</span>`:'<span class="sub">—</span>';
-  return `<div class="lrow${open?' open':''}${state.flash===q.id?' flash':''}${showH?' hasH':''}" data-act="open" data-id="${q.id}" tabindex="0" role="button">
+  return `<div class="lrow${open?' open':''}${state.flash===q.id?' flash':''}${showH?' hasH':''}${q.stage===5&&!q.closed?' won':''}" data-act="open" data-id="${q.id}" tabindex="0" role="button">
     <div class="c-recv"><span class="num">${fmtD(q.received)} ${fmtT(q.received)}</span>${showShop?`<small>${shopName(q.shop)}</small>`:''}</div>
     <div class="c-name"><span class="av a${q.id%6}" aria-hidden="true">${esc(q.name[0])}</span><div><b>${esc(q.name)}</b>${tags(q)}<small class="num">${esc(q.tel||q.email)}</small></div></div>
     <div class="c-inq"><span class="tag">${esc(q.media)}</span>${q.cls?`<span class="tag cls">${q.cls}</span>`:''}<span class="ell${q.property?' full':''}">${esc(sub(q))}</span>${ieLink(q.property)}</div>
@@ -1134,8 +1152,8 @@ const freeCls=n=>n>=2?'ok':n===1?'warn':'bad';
 function freeRow(shop,day,vs,today){
   const N=(H1-H0)*2, W=N*SLOT, cells=[], F=freeCounts(shop,day,vs);
   for(let i=0;i<N;i++){const n=F[i];
-    cells.push(`<span class="${freeCls(n)}" style="left:${i*SLOT+2}px;width:${SLOT-4}px" title="${H0+Math.floor(i/2)}:${i%2?'30':'00'}　接客できる人 ${n}人">${n}</span>`)}
-  return `<div class="trow"><div class="tlab"><span>接客できる人</span><small>出勤−予定−来店</small></div><div class="tline frees" style="width:${W}px;height:34px">${cells.join('')}</div></div>`;
+    cells.push(`<span class="${freeCls(n)}" style="left:${i*SLOT}px;width:${SLOT}px" title="${H0+Math.floor(i/2)}:${i%2?'30':'00'}　接客できる人 ${n}人">${n}</span>`)}
+  return `<div class="trow freerow"><div class="tlab"><span>接客できる人数</span><small>出勤 − 予定 − 来店</small></div><div class="tline frees" style="width:${W}px;height:22px">${cells.join('')}</div></div>`;
 }
 const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
 function calTools(shop,title,hq){
@@ -1339,6 +1357,7 @@ function vCust(){
       <div class="field ie"><span class="fl">いえらぶ</span>${q.ie?`<span class="rowwrap" style="margin-top:0"><button class="btn sm" data-act="ie-open" data-id="${id}">いえらぶで開く</button></span>`:`<span class="none-line" style="padding:0">未連携</span>`}</div>`;
   const contact=`<div class="card panel"><h2 class="st">${sn(2)}連絡する</h2>${contactBody}</div>`;
   const dvs=doneVisits(q);
+  const ap0=q.app||{}, wonbar=q.stage===5&&!q.closed?`<div class="wonbar"><span class="pill won st">成約</span><b>${esc([ap0.bld,ap0.room].filter(Boolean).join(' ')||q.property||'物件未入力')}</b>${ap0.contract?`<span>契約 ${fmtD(ymd(ap0.contract))}</span>`:''}${ap0.movein?`<span>入居 ${fmtD(ymd(ap0.movein))}</span>`:''}<span>担当 ${esc(sname(q.owner))}</span><span>宅建士 ${ap0.takken?esc(sname(+ap0.takken)):'<em style="color:var(--danger)">未入力</em>'}</span>${appTotal(q)?`<span>売上 ${yen(appTotal(q))}円</span>`:''}</div>`:'';
   const pastVisit=dvs.map((d,i)=>`<div class="field"><span class="fl">${i?'再来':'来店'}</span><span>${fmtD(d.at)} ${fmtT(d.at)}${d.staff?'・接客 '+esc(sname(d.staff)):''}</span></div>`).join('')+(q.visit&&q.visit.result&&q.visit.result!=='来店'?`<div class="field"><span class="fl">前回の予約</span><span>${fmtD(q.visit.at)} ${fmtT(q.visit.at)}・${q.visit.result}</span></div>`:'');
   const others=q.ck?DB.filter(x=>x.ck===q.ck&&x.id!==q.id):[];
   const wf=(k,l,ph)=>`<div class="field"><label for="f-${k}">${l}</label><input class="inp" id="f-${k}" data-f="wish.${k}" value="${esc(q.wish[k])}" placeholder="${ph}" maxlength="40"></div>`;
@@ -1382,6 +1401,7 @@ function vCust(){
       <div class="fgrid">${af('bld','物件名','例：グランコート東十条')}${af('room','号室','例：402')}${af('rent','賃料（円）','例：108,000','yen')}${af('fee','管理費（円）','例：5,000','yen')}
         ${af('applied','申込日','','date')}${af('movein',won?'入居日':'入居予定日','','date')}${af('contract',won?'契約日':'契約予定日','','date')}
         <div class="field"><span class="fl">審査</span><span class="rowwrap" style="margin-top:0">${['審査中','承認','否決'].map(t=>`<button type="button" class="chip" data-act="app-screen" data-v="${t}" aria-pressed="${ap.screen===t}">${t}</button>`).join('')}</span></div>
+        <div class="field"><label for="f-a-takken">担当宅建士</label><select class="sel" id="f-a-takken" data-f="app.takken"><option value="">未定</option>${STAFF.map(x=>opt(x.id,x.name+(x.shop!==q.shop?'（'+shopName(x.shop)+'）':''),ap.takken||'')).join('')}</select></div>
         ${af('comm','仲介手数料（円）','例：110,000','yen')}${af('ad','広告料（円）','例：50,000','yen')}</div>
       <div class="ftotal"><span>売上見込み</span><b class="app-total">${tot?yen(tot)+'円':'未入力'}</b><small>仲介手数料＋広告料</small></div></div>`;
   const pInfo=`<div class="card panel"><h2>基本情報</h2>
@@ -1409,7 +1429,7 @@ function vCust(){
     rest=pInfo+pWish+pOthers+pEnd;
   }
   return `<div class="chead"><button class="btn sm" data-act="back">${IC.back}一覧へ戻る</button><span class="av lg a${q.id%6}" aria-hidden="true">${esc(q.name[0])}</span><h1>${esc(q.name)}</h1><span class="kana">${esc(q.kana)}</span><span class="tag">${esc(q.media)}</span>${q.cls?`<span class="tag cls">${q.cls}</span>`:''}${tags(q)}${myShop()==null?`<span class="tag">${shopName(q.shop)}</span>`:''}${q.closed?`<span class="pill">終了（${q.closed}）</span>`:''}</div>
-  <div class="steps${q.closed?' closed':''}" aria-label="進み具合">${steps}</div>${peekbar}
+  <div class="steps${q.closed?' closed':''}" aria-label="進み具合">${steps}</div>${peekbar}${peeking?'':wonbar}
   <div class="cgrid${peeking?' peeking':''}" data-grp="${grp}" ${peeking?'inert':''}>
     <div class="c-main">${main}</div>
     <div class="c-rest">${rest}</div>
@@ -1773,6 +1793,7 @@ view.addEventListener('pointerdown',e=>{
 });
 const rowAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.trow:not(.thead)'):null};
 window.addEventListener('pointermove',e=>{
+  ghostAt(e);
   const t=$('#tip'), tp=e.target.closest?e.target.closest('[data-tip]'):null;
   if(tp&&!drag){t.textContent=tp.dataset.tip;t.hidden=false;const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(window.innerWidth-w-8,e.clientX+12))+'px';t.style.top=(e.clientY+16)+'px'}else t.hidden=true;
   if(!drag)return;
@@ -1783,6 +1804,16 @@ window.addEventListener('pointermove',e=>{
   $$('.trow.over').forEach(c=>c.classList.remove('over'));
   const r=rowAt(e.clientX,e.clientY); if(r)r.classList.add('over');
 });
+let ghostEl=null;
+function ghostAt(e){
+  const ln=e.target&&e.target.closest?e.target.closest('.tline.vadd,.tline.addable'):null;
+  if(!ln||drag||isMobile()){if(ghostEl){ghostEl.remove();ghostEl=null}return}
+  const row=ln.closest('.trow'), x=e.clientX-ln.getBoundingClientRect().left, i=Math.max(0,Math.min((H1-H0)*2-1,Math.floor(x/SLOT))), m=H0*60+i*30;
+  const isV=row.dataset.cls!==undefined, w=isV?SLOT*2:SLOT, lab=isV?(row.dataset.cls||'分類なし'):sname(+row.dataset.staff);
+  if(!ghostEl||ghostEl.parentElement!==ln){if(ghostEl)ghostEl.remove();ghostEl=document.createElement('div');ghostEl.className='cal-ghost';ln.appendChild(ghostEl)}
+  ghostEl.style.left=(i*SLOT+1)+'px';ghostEl.style.width=(w-3)+'px';
+  ghostEl.innerHTML=`<b>${esc(lab)}　${Math.floor(m/60)}:${p2(m%60)}</b>${isV?'＋ 来店':'＋ 予定'}`;
+}
 function endDrag(e,cancel){
   if(!drag)return; const d=drag; drag=null;
   const row=d.moved&&!cancel?rowAt(e.clientX,e.clientY):null;
@@ -1818,7 +1849,7 @@ window.matchMedia('(max-width:860px)').addEventListener('change',()=>{if(state.v
 /* ===================== 本番：Supabase 接続層 =====================
    画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
    render のあとに差分だけ保存する。他の端末の変更は Realtime で受けて差し替える。 */
-const APP_VER='0.7';
+const APP_VER='0.8';
 const CFG=window.HK_CONFIG||{};
 const SB=window.supabase.createClient(CFG.url,CFG.key);
 let idSeq=Math.floor(Math.random()*1000), idLast=0;
@@ -1840,7 +1871,7 @@ function qFromRows(c){
   const has=r=>!!(r.props||r.result||r.note);
   if(vs.length){const cur=vs.pop(); q.visit=cur; q.vis=has(cur._r)?cur._r:null; delete cur._r;
     q.pv=vs.map(v=>{v.rec=has(v._r)?v._r:null;delete v._r;return v})}
-  if(app)q.app={bld:app.bld||'',room:app.room||'',rent:app.rent??'',fee:app.fee??'',applied:app.applied_on||'',movein:app.movein_on||'',contract:app.contract_on||'',comm:app.comm??'',ad:app.ad??'',screen:app.screen||''};
+  if(app)q.app={bld:app.bld||'',room:app.room||'',rent:app.rent??'',fee:app.fee??'',applied:app.applied_on||'',movein:app.movein_on||'',contract:app.contract_on||'',comm:app.comm??'',ad:app.ad??'',screen:app.screen||'',takken:app.takken_id?String(app.takken_id):''};
   return q;
 }
 /* ---- q → 行 ---- */
@@ -1851,7 +1882,7 @@ function rowsOf(q){
   const acts=q.acts.map(a=>{if(!a.id)a.id=newId();return {id:a.id,customer_id:q.id,at:a.t.toISOString(),kind:a.k,staff_id:a.who||null,text:a.text||'',body:a.body||null,fu_step:a.fu||null,auto:!!a.auto}});
   const list=[...pastV(q).map(v=>[v,v.rec]),...(q.visit?[[q.visit,q.vis]]:[])];
   const visits=list.map(([v,r])=>{if(!v.id)v.id=newId();return {id:v.id,customer_id:q.id,at:v.at.toISOString(),dur_min:v.dur,confirmed:!!v.confirmed,result:v.result||null,again:!!v.again,staff_id:v.staff||null,props:(r&&r.props)||'',note:(r&&r.note)||'',next_result:(r&&r.result)||null}});
-  const a=q.app, app=a?{customer_id:q.id,bld:a.bld||'',room:a.room||'',rent:nnum(a.rent),fee:nnum(a.fee),applied_on:nz(dstr(a.applied)),movein_on:nz(dstr(a.movein)),contract_on:nz(dstr(a.contract)),screen:nz(a.screen),comm:nnum(a.comm),ad:nnum(a.ad)}:null;
+  const a=q.app, app=a?{customer_id:q.id,bld:a.bld||'',room:a.room||'',rent:nnum(a.rent),fee:nnum(a.fee),applied_on:nz(dstr(a.applied)),movein_on:nz(dstr(a.movein)),contract_on:nz(dstr(a.contract)),screen:nz(a.screen),comm:nnum(a.comm),ad:nnum(a.ad),takken_id:a.takken?+a.takken:null}:null;
   return {cust,acts,visits,app};
 }
 const taskRow=t=>{if(!t.id)t.id=newId();return {id:t.id,shop_id:t.shop,staff_id:t.staff,at:t.at.toISOString(),dur_min:t.dur,title:t.title,done:!!t.done}};
