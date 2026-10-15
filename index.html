@@ -356,6 +356,32 @@ select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-righ
 /* 絞り込みの開閉ボタンはスマホだけ */
 .ftog{display:none}
 @media (max-width:860px){.ftog{display:inline-flex}}
+/* スマホの1日カレンダー（縦に時間、列＝来店とスタッフ。横スクロールなし） */
+.vg{display:grid;overflow:hidden}
+.vg-h{display:contents}
+.vg-h > div{padding:7px 4px;font-size:12px;font-weight:700;text-align:center;border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--surface-2);min-width:0;overflow:hidden;line-height:1.25}
+.vg-h > div:first-child{border-left:0}
+.vg-h small{display:block;font-weight:600;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vg-h .off{color:var(--muted);background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,rgba(0,0,0,.04) 6px 7px)}
+.vg-b{display:contents}
+.vcol{position:relative;border-left:1px solid var(--line);background:repeating-linear-gradient(to bottom,var(--line) 0,var(--line) 1px,transparent 1px,transparent var(--ph));min-width:0}
+.vcol.off{background-color:var(--surface-2);background-image:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.035) 6px 7px),repeating-linear-gradient(to bottom,var(--line) 0,var(--line) 1px,transparent 1px,transparent var(--ph))}
+.vcol.addable{cursor:cell}
+.vgut{position:relative;border-left:0}
+.vgut span{position:absolute;left:0;right:0;height:var(--ph);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.vgut span i{font-style:normal;font-weight:700;font-size:11px;border-radius:5px;padding:0 5px;margin-top:2px}
+.vgut .ok i{background:var(--ok-soft);color:var(--ok)}.vgut .warn i{background:var(--warn-soft);color:var(--warn)}.vgut .bad i{background:var(--danger-soft);color:var(--danger)}
+.vb{position:absolute;left:2px;right:2px;border-radius:6px;font-size:11px;line-height:1.25;padding:3px 4px;overflow:hidden;cursor:pointer;background:var(--surface);border:1.5px dashed var(--accent)}
+.vb b{display:block;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vb small{display:block;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vb.conf{background:var(--accent-soft);border-style:solid}
+.vb.done{background:var(--ok-soft);border:1.5px solid transparent;color:var(--ok)}
+.vb.off{background:var(--surface-2);border:1.5px solid transparent;color:var(--muted);text-decoration:line-through}
+.vb.task{background:var(--surface-2);border:1.5px solid var(--line-2)}
+.vb.task.fin{opacity:.6;text-decoration:line-through}
+.vnow{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:2;pointer-events:none}
+.vg-wrap{overflow:hidden}
+.vg-sum{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
 /* ログイン */
 .login{max-width:380px;margin:12vh auto 0;padding:28px 26px;display:grid;gap:12px}
 .login h1{font-size:20px;display:flex;align-items:center;gap:10px}
@@ -1126,17 +1152,26 @@ function agRow(q,showCls){
 function vCalMobile(){
   const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null;
   if(state.calMode==='day'){
-    const vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY, future=dayDiff(day)>=0, title=fmtD(day)+(dayDiff(day)===0?'（今日）':'');
+    const vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY, future=dayDiff(day)>=0, isToday=dayDiff(day)===0, title=fmtD(day)+(isToday?'（今日）':'');
+    const PH=52, HT=(H1-H0)*PH, S=staffOf(shop);
+    const top=d=>((d.getHours()*60+d.getMinutes())-H0*60)/60*PH, hgt=m=>Math.max(m/60*PH-2,20);
     const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
     const duebar=dues.length?`<div class="card duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`:'';
     const F=freeCounts(shop,day,vs), hours=[...Array(H1-H0)].map((_,i)=>Math.min(F[i*2],F[i*2+1]));
-    const free=`<div class="freebar">${hours.map((n,i)=>`<span class="h">${H0+i}</span>`).join('')}${hours.map(n=>`<span class="${freeCls(n)}">${n}</span>`).join('')}</div>`;
-    const staffCards=staffOf(shop).map(s=>{const ts=TASKS.filter(t=>t.staff===s.id&&t.at>=a&&t.at<b).sort((x,y)=>x.at-y.at), at_=attOf(s.id,day), off=isOff(at_);
-      return `<div class="ag-staff${off?' isoff':''}"><div class="nm"><span>${esc(s.name)}${s.id===me?'<small class="mnote">　自分</small>':''}</span>${attLabel(at_)?`<small class="att ${at_.s}">${attLabel(at_)}</small>`:''}${off?'':`<button class="linkbtn" style="margin-left:auto" data-act="task-new" data-staff="${s.id}">＋ 予定</button>`}</div>${ts.map(t=>`<div class="ag-task${t.done?' fin':''}"><button class="agd" data-act="task-done" data-id="${t.id}" aria-pressed="${t.done}" aria-label="${t.done?'済みを取り消す':'済みにする'}">${t.done?'✓':''}</button><span data-act="task-edit" data-id="${t.id}" role="button" tabindex="0"><b class="num">${fmtT(t.at)}</b>　${esc(t.title)}</span></div>`).join('')}</div>`}).join('');
+    const gut=`<div class="vcol vgut" style="height:${HT}px">${hours.map((n,i)=>`<span class="${future?freeCls(n):''}" style="top:${i*PH}px">${H0+i}${future?`<i>${n}</i>`:''}</span>`).join('')}</div>`;
+    const items=vs.map(q=>{const v=q.visit;return {q,at:v.at,dur:v.dur,lw:0}}); const nl=lanes(items);
+    const vblocks=items.map(it=>{const q=it.q,v=q.visit, cls=v.result==='来店'?'done':v.result?'off':v.confirmed?'conf':'', w=100/nl;
+      return `<div class="vb ${cls}" data-act="open" data-id="${q.id}" style="top:${top(v.at)+1}px;height:${hgt(v.dur)}px;left:calc(${it.lane*w}% + 2px);right:auto;width:calc(${w}% - 4px)"><b>${esc(q.name)}</b><small>${fmtT(v.at)}${q.cls?' '+q.cls:''}${v.again?' 再来':''}${v.result==='来店'?' 済':v.result?' '+v.result:v.confirmed?'':' 確認まだ'}</small></div>`}).join('');
+    const now=(Date.now()-a)/MIN-H0*60, nowline=isToday&&now>0&&now<(H1-H0)*60?`<div class="vnow" style="top:${now/60*PH}px"></div>`:'';
+    const vcol=`<div class="vcol${future?' addable':''}" data-vcol="visit" data-day="${a}" style="height:${HT}px">${vblocks}${nowline}</div>`;
+    const scols=S.map(st=>{const ts=TASKS.filter(t=>t.staff===st.id&&t.at>=a&&t.at<b), at_=attOf(st.id,day), off=isOff(at_);
+      return `<div class="vcol${off?' off':future?' addable':''}" data-vcol="staff" data-staff="${st.id}" data-day="${a}" style="height:${HT}px">${ts.map(t=>`<div class="vb task${t.done?' fin':''}" data-act="task-edit" data-id="${t.id}" style="top:${top(t.at)+1}px;height:${hgt(t.dur)}px"><b>${esc(t.title)}</b><small>${fmtT(t.at)}〜${fmtT(new Date(t.at.getTime()+t.dur*MIN))}</small></div>`).join('')}${nowline}</div>`}).join('');
+    const heads=`<div></div><div>来店<small>${vs.length}件</small></div>`+S.map(st=>{const at_=attOf(st.id,day), off=isOff(at_);return `<div class="${off?'off':''}">${esc(st.name)}<small class="att ${at_.s}">${attLabel(at_)||'　'}</small></div>`}).join('');
+    const cols=`34px minmax(92px,1.7fr) repeat(${S.length},minmax(0,1fr))`;
     return calTools(shop,title,hq)+`<div class="agenda">${duebar}
-      <div class="card ag-card"><div class="ag-h"><span>来店<small>${vs.length}件</small></span>${future?`<button class="btn sm" data-act="visit-new">${IC.plus}来店</button>`:''}</div>${vs.map(q=>agRow(q,true)).join('')||'<div class="ag-empty">来店の予定はありません</div>'}</div>
-      ${future?`<div class="card ag-card"><div class="ag-h"><span>接客できる人<small>出勤−予定−来店</small></span></div>${free}</div>`:''}
-      <div class="card ag-card"><div class="ag-h"><span>スタッフの予定${attSummary(shop,day)}</span></div>${staffCards||'<div class="ag-empty">スタッフがいません</div>'}</div>
+      <div class="card vg-wrap"><div class="vg-sum"><span>${attSummary(shop,day)}</span>${future?`<button class="btn sm" data-act="visit-new" style="margin-left:auto">${IC.plus}来店</button>`:''}</div>
+        <div class="vg" style="--ph:${PH}px;grid-template-columns:${cols}"><div class="vg-h">${heads}</div><div class="vg-b">${gut}${vcol}${scols}</div></div></div>
+      <div class="legend"><span><i style="background:var(--surface);border:1.5px dashed var(--accent)"></i>確認まだ</span><span><i style="background:var(--accent-soft);border:1.5px solid var(--accent)"></i>確認済み</span><span><i style="background:var(--ok-soft)"></i>来店済み</span><span><i style="background:var(--surface-2);border:1.5px solid var(--line-2)"></i>予定</span>${future?'<span>左の数字＝その時間に接客できる人</span>':''}</div>
     </div>`;
   }
   const wk=addD(day,-((day.getDay()+6)%7)), days=[...Array(7)].map((_,i)=>addD(wk,i)), title=fmtD(days[0])+'〜'+fmtD(days[6]);
@@ -1680,6 +1715,11 @@ document.addEventListener('click',e=>{
   if(el&&A[el.dataset.act]){A[el.dataset.act](el,e);return}
   if(e.target===overlay){A['sheet-x']();return}
   /* 名前の行の空いたところを押したら、その時刻で予定を入れる */
+  if(e.target.classList&&e.target.classList.contains('vcol')&&e.target.classList.contains('addable')){
+    const col=e.target, y=e.clientY-col.getBoundingClientRect().top, ph=parseFloat(getComputedStyle(col).getPropertyValue('--ph'))||52, m=H0*60+Math.floor(y/ph*2)*30;
+    const d=new Date(+col.dataset.day);d.setHours(Math.floor(m/60),m%60,0,0);
+    if(col.dataset.vcol==='visit')openPick({cls:null,at:d});else openTask(null,{staff:+col.dataset.staff,at:d});return;
+  }
   if(e.target.classList&&(e.target.classList.contains('addable')||e.target.classList.contains('vadd'))){
     const row=e.target.closest('.trow'), x=e.clientX-e.target.getBoundingClientRect().left, m=H0*60+Math.floor(x/SLOT)*30;
     const d=new Date(+row.dataset.day);d.setHours(Math.floor(m/60),m%60,0,0);
@@ -1778,7 +1818,7 @@ window.matchMedia('(max-width:860px)').addEventListener('change',()=>{if(state.v
 /* ===================== 本番：Supabase 接続層 =====================
    画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
    render のあとに差分だけ保存する。他の端末の変更は Realtime で受けて差し替える。 */
-const APP_VER='0.4';
+const APP_VER='0.5';
 const CFG=window.HK_CONFIG||{};
 const SB=window.supabase.createClient(CFG.url,CFG.key);
 let idSeq=Math.floor(Math.random()*1000), idLast=0;
@@ -1863,6 +1903,8 @@ async function loadAll(){
   if(myShop()==null){const um=chk(await SB.from('mail_inbox').select('*').eq('status','unmatched').order('received_at',{ascending:false}).limit(100));
     UNM=(um.data||[]).map(u=>({id:u.id,from:u.from_addr,s:u.subject||'',body:u.body||'',t:new Date(u.received_at),shop:u.shop_id}))}
   if(myShop()!=null)state.calShop=myShop(); else if(SHOPS.length&&!SHOPS.some(x=>x.id===state.calShop))state.calShop=SHOPS[0].id;
+  /* デモデータが入っている間は、Jinjer の仮データも出す（切ったら切ったまま） */
+  try{if(localStorage.getItem('hk3-jdemo')==null&&DB.some(q=>q.ieNo==='DEMO'))JINJER_ON=true}catch(e){}
 }
 /* ---- 他の端末の変更を受ける ---- */
 function subscribe(){
