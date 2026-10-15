@@ -663,9 +663,11 @@ let HOME=APPS[APP].views[0];
 let DB=[], TASKS=[], uid=0, tid=0, mailN={mt:0,mm:0}, mailTab='mt';
 /* Jinjer の打刻（見本は固定値。本番は Jinjer API から取り、カレンダーを開いたときに最新を読む） */
 const ATT_AT='10:10';
-const ATT={1:{s:'in',t:'9:58'},2:{s:'off',l:'公休'},3:{s:'in',t:'10:03'},4:{s:'none'},5:{s:'in',t:'9:51'},6:{s:'leave',l:'有休'}};
-const LEAVE=[{staff:3,off:1,l:'公休'},{staff:1,off:2,l:'有休'},{staff:5,off:1,l:'公休'},{staff:2,off:-1,l:'公休'}];
-const JINJER_ON=false;
+let JINJER_ON=false;try{JINJER_ON=localStorage.getItem('hk3-jdemo')==='1'}catch(e){}
+const ATTS=[{s:'in',t:'9:58'},{s:'off',l:'公休'},{s:'in',t:'10:03'},{s:'none'},{s:'in',t:'9:51'},{s:'leave',l:'有休'}];
+const ATT=new Proxy({},{get:(_,k)=>{const i=STAFF.findIndex(x=>String(x.id)===String(k));return i<0?undefined:ATTS[i%ATTS.length]}});
+const LEAVES=[{pos:2,off:1,l:'公休'},{pos:0,off:2,l:'有休'},{pos:4,off:1,l:'公休'},{pos:1,off:-1,l:'公休'}];
+const LEAVE={find:f=>{const L=LEAVES.map(x=>({staff:(STAFF[x.pos]||{}).id,off:x.off,l:x.l}));return L.find(f)}};
 const attOf=(id,day)=>{if(!JINJER_ON)return {s:'plan'};const n=dayDiff(day);if(n===0)return ATT[id]||{s:'none'};const lv=LEAVE.find(x=>x.staff===id&&x.off===n);return lv?{s:'off',l:lv.l}:{s:'plan'}};
 const attLabel=a=>a.s==='in'?'出勤 '+a.t:a.s==='out'?'退勤 '+a.t:a.s==='off'||a.s==='leave'?'休み・'+a.l:a.s==='none'?'未打刻':'';
 const isOff=a=>a.s==='off'||a.s==='leave';
@@ -919,7 +921,8 @@ window.addEventListener('hashchange',()=>setApp(appFromLoc()));
 const IC_EXT='<svg class="ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
 function demoCtl(){
   return `<label>見た目<select data-df="look">${Object.entries(LOOKS).map(([k,l])=>`<option value="${k}" ${state.look===k?'selected':''}>${l}</option>`).join('')}</select></label>
-  <p class="mnote" style="margin:6px 0 0">${authUser?esc(authUser.email):''}</p>
+  <p class="mnote" style="margin:6px 0 0">${authUser?esc(authUser.email):''}　v${APP_VER}</p>
+  ${MEROW&&MEROW.role==='hq'?`<div class="rowwrap" style="margin-top:8px"><button class="btn sm" data-act="demo-seed">デモデータを入れる</button><button class="btn sm ghost" data-act="demo-clear">デモデータを消す</button><button class="btn sm${JINJER_ON?' on':''}" data-act="jdemo" aria-pressed="${JINJER_ON}">Jinjer仮データ ${JINJER_ON?'ON':'OFF'}</button></div>`:''}
   <button class="linkbtn" data-act="logout">ログアウト</button>`;
 }
 function renderSide(){
@@ -1086,7 +1089,7 @@ function trow(lab,attrs,blocks,today,addable){
 }
 function attSummary(shop,day){
   const S=staffOf(shop), today=dayDiff(day)===0;
-  if(!JINJER_ON)return `<span class="attsum" style="font-weight:400">Jinjer 未接続</span>`;
+  if(!JINJER_ON)return `<span class="attsum" style="font-weight:400">Jinjer 未接続</span>`;if(JINJER_ON)return `<span class="attsum" style="font-weight:400">Jinjer 仮データ</span>`+(today?'':'');
   if(!today){const o=S.filter(s=>isOff(attOf(s.id,day)));return `<span class="attsum">${o.length?'休み '+o.length+'人（Jinjerの休暇申請）':'休みの申請なし'}</span>`}
   const n=k=>S.filter(s=>(ATT[s.id]||{s:'none'}).s===k).length;
   return `<span class="attsum">出勤 ${n('in')+n('out')}・休み ${n('off')+n('leave')}・未打刻 ${n('none')}　<span style="font-weight:400">Jinjerの打刻 ${ATT_AT}時点</span></span>`;
@@ -1561,7 +1564,7 @@ function openNew(pre={}){
       const who=+$('#nw-who').value, media=$('#nw-media').value, msg=$('#nw-msg').value.trim(), cls=$('#nw-cls').value||null, vd=$('#nw-vd').value, dup=findDup(shop,tel,mail);
       if(vd&&!cls){warn('来店予約を入れるときは、分類を選んでください。');$('#nw-cls').focus();return false}
       let ck=null; if(dup){ck=dup.ck||('c'+dup.id);dup.ck=ck}
-      const q={id:newId(),shop,name,kana:'',media,cls,received:new Date(),stage:media==='電話'?1:0,owner:null,closed:null,tel,email:mail,property:$('#nw-prop').value.trim(),msg,wish:{area:'',rent:'',layout:'',movein:''},due:null,dueWhat:'',amount:null,visit:null,visited:false,ck,acts:[]};
+      const q={id:newId(),shop,name,kana:'',media,cls,received:new Date(),stage:media==='電話'?1:0,owner:null,closed:null,tel,email:mail,property:$('#nw-prop').value.trim(),msg,ieNo:null,wish:{area:'',rent:'',layout:'',movein:''},due:null,dueWhat:'',amount:null,visit:null,visited:false,ck,acts:[]};
       q.acts.push({t:new Date(),k:'in',text:msg});
       if(media==='電話')q.acts.push({t:new Date(),k:'tel_ok',who,text:'電話で受付'});
       if(vd){const [h,mi]=$('#nw-vt').value.split(':').map(Number), w=ymd(vd); w.setHours(h,mi,0,0);
@@ -1775,9 +1778,11 @@ window.matchMedia('(max-width:860px)').addEventListener('change',()=>{if(state.v
 /* ===================== 本番：Supabase 接続層 =====================
    画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
    render のあとに差分だけ保存する。他の端末の変更は Realtime で受けて差し替える。 */
+const APP_VER='0.4';
 const CFG=window.HK_CONFIG||{};
 const SB=window.supabase.createClient(CFG.url,CFG.key);
-const newId=()=>Date.now()*1000+Math.floor(Math.random()*1000);
+let idSeq=Math.floor(Math.random()*1000), idLast=0;
+const newId=()=>{let t=Date.now();if(t<=idLast)t=idLast;idLast=t;return t*1000+(idSeq=(idSeq+1)%1000)};
 const chk=r=>{if(r&&r.error)throw r.error;return r};
 function fail(e){console.error(e);toast('保存できませんでした：'+((e&&e.message)||e)+'　通信を確認してもう一度操作してください')}
 const nz=v=>(v===''||v==null)?null:v;
@@ -1789,7 +1794,7 @@ function qFromRows(c){
   const acts=c.acts||[], visits=c.visits||[], app=Array.isArray(c.applications)?c.applications[0]:c.applications;
   const q={id:c.id,shop:c.shop_id,name:c.name,kana:c.kana||'',media:c.media,received:new Date(c.received_at),stage:c.stage,owner:c.owner_id,closed:c.closed_reason,
     cls:c.cls,tel:c.tel||'',email:c.email||'',property:c.property_text||'',propId:c.property_id,msg:c.message||'',wish:Object.assign({area:'',rent:'',layout:'',movein:''},c.wish||{}),
-    due:c.due_at?ymd(c.due_at):null,dueWhat:c.due_what||'',amount:c.amount_man==null?null:+c.amount_man,visit:null,visited:c.stage>=3,ck:c.dup_key,ie:!!c.ie_linked,vis:null,app:null,pv:[],acts:[],reply:!!c.reply_pending};
+    ieNo:c.ie_customer_no||null,due:c.due_at?ymd(c.due_at):null,dueWhat:c.due_what||'',amount:c.amount_man==null?null:+c.amount_man,visit:null,visited:c.stage>=3,ck:c.dup_key,ie:!!c.ie_linked,vis:null,app:null,pv:[],acts:[],reply:!!c.reply_pending};
   q.acts=acts.map(a=>({id:a.id,t:new Date(a.at),k:a.kind,who:a.staff_id,text:a.text||'',body:a.body||undefined,fu:a.fu_step||undefined,auto:a.auto||undefined})).sort((a,b)=>a.t-b.t);
   const vs=visits.map(v=>({id:v.id,at:new Date(v.at),dur:v.dur_min,confirmed:!!v.confirmed,result:v.result,staff:v.staff_id,again:!!v.again,_r:{props:v.props||'',result:v.next_result||'',note:v.note||''}})).sort((a,b)=>a.id-b.id);
   const has=r=>!!(r.props||r.result||r.note);
@@ -1802,7 +1807,7 @@ function qFromRows(c){
 function rowsOf(q){
   const cust={id:q.id,shop_id:q.shop,name:q.name,kana:q.kana||'',tel:q.tel||'',email:q.email||'',media:q.media,cls:q.cls||null,stage:q.stage,closed_reason:q.closed||null,owner_id:q.owner||null,
     received_at:q.received.toISOString(),property_text:q.property||'',property_id:q.propId||null,message:q.msg||'',wish:q.wish||{},due_at:q.due?iso(q.due):null,due_what:q.dueWhat||'',
-    amount_man:nnum(q.amount),reply_pending:!!q.reply,dup_key:q.ck||null,ie_linked:!!q.ie};
+    amount_man:nnum(q.amount),reply_pending:!!q.reply,dup_key:q.ck||null,ie_linked:!!q.ie,ie_customer_no:q.ieNo||null};
   const acts=q.acts.map(a=>{if(!a.id)a.id=newId();return {id:a.id,customer_id:q.id,at:a.t.toISOString(),kind:a.k,staff_id:a.who||null,text:a.text||'',body:a.body||null,fu_step:a.fu||null,auto:!!a.auto}});
   const list=[...pastV(q).map(v=>[v,v.rec]),...(q.visit?[[q.visit,q.vis]]:[])];
   const visits=list.map(([v,r])=>{if(!v.id)v.id=newId();return {id:v.id,customer_id:q.id,at:v.at.toISOString(),dur_min:v.dur,confirmed:!!v.confirmed,result:v.result||null,again:!!v.again,staff_id:v.staff||null,props:(r&&r.props)||'',note:(r&&r.note)||'',next_result:(r&&r.result)||null}});
@@ -1892,6 +1897,38 @@ async function reloadTasks(){
   if(same||drag||!overlay.hidden)return;
   TASKS=L; tshadow.clear(); L.forEach((t,i)=>tshadow.set(t.id,j[i])); if(state.view==='cal')render();
 }
+
+/* ---- デモデータ（本部だけ）：見本の seed() を本物の店舗・スタッフに当てはめて保存する ---- */
+const DEMO_STAFF=[['佐伯',0],['三浦',0],['小野寺',0],['樋口',0],['真鍋',1],['久世',1]];
+async function seedDemo(){
+  if(SHOPS.length<2){toast('店舗が2つ以上必要です');return}
+  const shopMap={1:SHOPS[0].id,2:SHOPS[1].id};
+  const st=chk(await SB.from('staff').select('*').eq('active',true)); const all=st.data||[];
+  const ids=[];
+  for(const [name,si] of DEMO_STAFF){const shop=shopMap[si+1]; let r=all.find(x=>x.name===name&&x.shop_id===shop);
+    if(!r){const ins=chk(await SB.from('staff').insert({shop_id:shop,name,role:'staff',is_shared:false,active:true}).select('*').single());r=ins.data}
+    ids.push(r.id)}
+  const staffMap={1:ids[0],2:ids[1],3:ids[2],4:ids[3],5:ids[4],6:ids[5]};
+  const st2=chk(await SB.from('staff').select('*').eq('active',true).order('id'));
+  STAFF=(st2.data||[]).filter(x=>x.role!=='hq'&&!x.is_shared&&x.shop_id).map(x=>({id:x.id,name:x.name,shop:x.shop_id}));
+  const keepDB=DB, keepT=TASKS;
+  const L=seed(); const T=TASKS; TASKS=keepT;
+  const ms=v=>v==null?v:(staffMap[v]||null);
+  L.forEach(q=>{q.id=newId();q.shop=shopMap[q.shop];q.owner=ms(q.owner);q.ieNo='DEMO';q.acts.forEach(a=>{a.who=ms(a.who)});if(q.visit)q.visit.staff=ms(q.visit.staff);(q.pv||[]).forEach(p=>{p.staff=ms(p.staff)})});
+  T.forEach(t=>{t.id=newId();t.shop=shopMap[t.shop];t.staff=ms(t.staff)});
+  DB=[...L,...keepDB]; TASKS=[...T,...keepT];
+  render(); await new Promise(r=>setTimeout(r,300)); await saving;
+}
+async function clearDemo(){
+  chk(await SB.from('customers').delete().eq('ie_customer_no','DEMO'));
+  const st=chk(await SB.from('staff').select('id,name,shop_id').eq('active',true));
+  const dIds=(st.data||[]).filter(x=>DEMO_STAFF.some(([n])=>n===x.name)).map(x=>x.id);
+  if(dIds.length)chk(await SB.from('tasks').delete().in('staff_id',dIds));
+  chk(await SB.from('mail_inbox').delete().in('id',[910001,910002]));
+}
+A['demo-seed']=async()=>{if(!confirm('架空のお客様31件・予定・デモ用スタッフ6人を入れます。よろしいですか'))return;try{await seedDemo();toast('デモデータを入れました')}catch(e){fail(e)}};
+A['demo-clear']=async()=>{if(!confirm('デモデータ（架空のお客様・予定）を消します。よろしいですか'))return;try{await clearDemo();location.reload()}catch(e){fail(e)}};
+A['jdemo']=()=>{JINJER_ON=!JINJER_ON;try{localStorage.setItem('hk3-jdemo',JINJER_ON?'1':'0')}catch(e){}render();toast(JINJER_ON?'Jinjerの仮データを表示します（この端末だけ）':'Jinjerの仮データを消しました')};
 
 /* ---- ログイン ---- */
 function showLogin(msg){
