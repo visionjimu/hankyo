@@ -359,7 +359,7 @@ select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-righ
 /* スマホの1日カレンダー（縦に時間、列＝来店とスタッフ。横スクロールなし） */
 .vg{display:grid;overflow:hidden}
 .vg-h{display:contents}
-.vg-h > div{padding:7px 4px;font-size:12.5px;font-weight:700;text-align:center;border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--surface-2);min-width:0;overflow:hidden;line-height:1.25}
+.vg-h > div{padding:7px 4px;font-size:12px;font-weight:700;text-align:center;border-bottom:1px solid var(--line);border-left:1px solid var(--line);background:var(--surface-2);min-width:0;overflow:hidden;line-height:1.25}
 .vg-h > div:first-child{border-left:0}
 .vg-h small{display:block;font-weight:600;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vg-h .off{color:var(--muted);background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,rgba(0,0,0,.04) 6px 7px)}
@@ -381,16 +381,6 @@ select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-righ
 .vb.task.fin{opacity:.6;text-decoration:line-through}
 .vnow{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:2;pointer-events:none}
 .vg-wrap{overflow:hidden}
-.vg-h .hplus{border:1px solid var(--line-2);background:var(--surface);border-radius:5px;width:20px;height:18px;line-height:1;padding:0;font-size:13px;color:var(--accent-text);vertical-align:1px}
-.vg-h .hplus:hover{background:var(--accent-soft)}
-.vg-h .today{background:var(--accent-soft)}
-.vg-h .me{box-shadow:inset 0 -3px 0 var(--accent)}
-.vcol.today{background-color:rgba(11,133,99,.04)}
-.vcol.over{background-color:var(--accent-soft)}
-.vb.moving{z-index:6;box-shadow:var(--pop-shadow);cursor:grabbing;pointer-events:none;opacity:.95}
-.vb.task .agd{position:absolute;right:3px;top:3px;width:16px;height:16px;font-size:10px}
-.vb.task b{padding-right:18px}
-@media (min-width:861px){.vb{font-size:12px;padding:4px 6px}.vb b{font-size:13px}.vb small{font-size:11.5px}.vcol:not(.vgut){cursor:default}.vcol.addable{cursor:cell}.vb{cursor:grab}}
 .vg-sum{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
 /* ログイン */
 .login{max-width:380px;margin:12vh auto 0;padding:28px 26px;display:grid;gap:12px}
@@ -1159,62 +1149,68 @@ function agRow(q,showCls){
   const v=q.visit, st=v.result==='来店'?'来店済み':v.result?v.result:v.confirmed?'確認済み':'確認まだ', tone=v.result==='来店'?'ok':v.result?'':v.confirmed?'accent':'warn';
   return `<div class="ag-row${v.result==='来店'?' done':v.result?' off':''}" data-act="open" data-id="${q.id}" role="button" tabindex="0"><div class="ag-t">${fmtT(v.at)}<small>${v.dur}分</small></div><div class="ag-n"><b>${esc(q.name)}</b>${showCls&&q.cls?`<span class="tag cls" style="margin-left:6px">${q.cls}</span>`:''}${v.again?'<span class="tag re">再来</span>':''}<small>${esc(sub(q))||'—'}${v.staff?'　接客 '+esc(sname(v.staff)):''}</small></div><span class="pill ${tone} st">${st}</span></div>`;
 }
-function vCalMobile(){return vCal()}
-/* 1列＝来店の分類（スマホはまとめて1列）とスタッフ。札は時刻で縦に置く。lanes で重なりを横に分ける */
-function vgCol(items,mk){const nl=lanes(items);return items.map(it=>{const w=100/nl;return mk(it,`left:calc(${it.lane*w}% + 2px);width:calc(${w}% - 4px)`)}).join('')}
-function vDayHTML(shop,day,phone){
-  const PH=phone?52:56, HT=(H1-H0)*PH, a=day.getTime(), b=a+DAY, future=dayDiff(day)>=0, isToday=dayDiff(day)===0, me=ME();
-  const vs=visitsOn(day,shop), S=staffOf(shop);
-  const top=d=>((d.getHours()*60+d.getMinutes())-H0*60)/60*PH, hgt=m=>Math.max(m/60*PH-2,20);
-  const F=freeCounts(shop,day,vs), hours=[...Array(H1-H0)].map((_,i)=>Math.min(F[i*2],F[i*2+1]));
-  const gut=`<div class="vcol vgut" style="height:${HT}px">${hours.map((n,i)=>`<span class="${future?freeCls(n):''}" style="top:${i*PH}px">${H0+i}${future?`<i>${n}</i>`:''}</span>`).join('')}</div>`;
-  const now=(Date.now()-a)/MIN-H0*60, nowline=isToday&&now>0&&now<(H1-H0)*60?`<div class="vnow" style="top:${now/60*PH}px"></div>`:'';
-  const vb=(q,st)=>{const v=q.visit, cls=v.result==='来店'?'done':v.result?'off':v.confirmed?'conf':'';
-    return `<div class="vb ${cls}" data-kind="visit" data-act="open" data-id="${q.id}" title="${esc(q.name)}・${esc(q.cls||'分類なし')}・${fmtT(v.at)}から${v.dur}分" style="top:${top(v.at)+1}px;height:${hgt(v.dur)}px;${st}"><b>${esc(q.name)}</b><small>${fmtT(v.at)}${phone&&q.cls?' '+q.cls:''}${v.again?' 再来':''}${v.result==='来店'?' 済'+(v.staff?'・'+esc(sname(v.staff)):''):v.result?' '+esc(v.result):v.confirmed?' 確認済':' 確認まだ'}</small></div>`};
-  const groups=phone?[null]:[...CLS,...(vs.some(q=>!q.cls)?[undefined]:[])];
-  const vcols=groups.map(c=>{const L=c===null?vs:vs.filter(q=>(q.cls||undefined)===c);
-    const items=L.map(q=>({q,at:q.visit.at,dur:q.visit.dur,lw:0}));
-    return `<div class="vcol${future?' addable':''}" data-vcol="visit" ${c?`data-cls="${c}"`:c===undefined?'data-cls=""':''} data-day="${a}" style="height:${HT}px">${vgCol(items,(it,st)=>vb(it.q,st))}${nowline}</div>`}).join('');
-  const vheads=groups.map(c=>{const L=c===null?vs:vs.filter(q=>(q.cls||undefined)===c);
-    return `<div>${c===null?'来店':c||'分類なし'}<small>${L.length}件${future&&c!==undefined?`　<button class="hplus" data-act="visit-new" ${c?`data-cls="${c}"`:''} aria-label="来店を入れる">＋</button>`:''}</small></div>`}).join('');
-  const scols=S.map(st=>{const ts=TASKS.filter(t=>t.staff===st.id&&t.at>=a&&t.at<b), at_=attOf(st.id,day), off=isOff(at_);
-    const items=ts.map(t=>({t,at:t.at,dur:t.dur,lw:0}));
-    return `<div class="vcol${off?' off':future?' addable':''}" data-vcol="staff" data-staff="${st.id}" data-day="${a}" style="height:${HT}px">${vgCol(items,(it,stl)=>{const t=it.t;return `<div class="vb task${t.done?' fin':''}" data-kind="task" data-act="task-edit" data-id="${t.id}" title="${esc(t.title)}" style="top:${top(t.at)+1}px;height:${hgt(t.dur)}px;${stl}"><button class="agd" data-act="task-done" data-id="${t.id}" aria-pressed="${t.done}" aria-label="${t.done?'済みを取り消す':'済みにする'}">${t.done?'✓':''}</button><b>${esc(t.title)}</b><small>${fmtT(t.at)}〜${fmtT(new Date(t.at.getTime()+t.dur*MIN))}</small></div>`})}${nowline}</div>`}).join('');
-  const sheads=S.map(st=>{const at_=attOf(st.id,day), off=isOff(at_);return `<div class="${off?'off':''}${st.id===me?' me':''}">${esc(st.name)}<small class="att ${at_.s}">${attLabel(at_)||(JINJER_ON?'—':'　')}${!off&&future?`　<button class="hplus" data-act="task-new" data-staff="${st.id}" aria-label="予定を入れる">＋</button>`:''}</small></div>`}).join('');
-  const cols=`${phone?34:44}px ${groups.map(()=>phone?'minmax(92px,1.7fr)':'minmax(0,1.15fr)').join(' ')} repeat(${S.length},minmax(0,1fr))`;
-  return `<div class="card vg-wrap"><div class="vg-sum"><span>${attSummary(shop,day)}</span>${future?`<button class="btn sm" data-act="visit-new" style="margin-left:auto">${IC.plus}来店</button>`:''}</div>
-    <div class="vg${phone?' phone':''}" style="--ph:${PH}px;grid-template-columns:${cols}"><div class="vg-h"><div></div>${vheads}${sheads}</div><div class="vg-b">${gut}${vcols}${scols}</div></div></div>`;
-}
-function vWeekHTML(shop,days){
-  const PH=56, HT=(H1-H0)*PH;
-  const top=d=>((d.getHours()*60+d.getMinutes())-H0*60)/60*PH, hgt=m=>Math.max(m/60*PH-2,20);
-  const gut=`<div class="vcol vgut" style="height:${HT}px">${[...Array(H1-H0)].map((_,i)=>`<span style="top:${i*PH}px">${H0+i}</span>`).join('')}</div>`;
-  const cols=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0, a=d.getTime(), future=dayDiff(d)>=0;
-    const now=(Date.now()-a)/MIN-H0*60, nowline=t&&now>0&&now<(H1-H0)*60?`<div class="vnow" style="top:${now/60*PH}px"></div>`:'';
-    const items=vs.map(q=>({q,at:q.visit.at,dur:q.visit.dur,lw:0}));
-    return `<div class="vcol${t?' today':''}${future?' addable':''}" data-vcol="visit" data-day="${a}" style="height:${HT}px">${vgCol(items,(it,st)=>{const q=it.q,v=q.visit,cls=v.result==='来店'?'done':v.result?'off':v.confirmed?'conf':'';
-      return `<div class="vb ${cls}" data-kind="visit" data-act="open" data-id="${q.id}" title="${esc(q.name)}・${esc(q.cls||'分類なし')}・${fmtT(v.at)}" style="top:${top(v.at)+1}px;height:${hgt(v.dur)}px;${st}"><b>${esc(q.name)}</b><small>${fmtT(v.at)}${q.cls?' '+q.cls:''}${v.again?' 再来':''}</small></div>`})}${nowline}</div>`}).join('');
-  const heads=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0, offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
-    return `<div class="${t?'today':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?' 今日':''}</button><small>来店 ${vs.length}件${offs.length?'　休み：'+esc(offs.join('・')):''}</small></div>`}).join('');
-  return `<div class="card vg-wrap"><div class="vg" style="--ph:${PH}px;grid-template-columns:44px repeat(7,minmax(0,1fr))"><div class="vg-h"><div></div>${heads}</div><div class="vg-b">${gut}${cols}</div></div></div>`;
-}
-function vCal(){
-  const shop=calShop(), day=state.calDay, hq=myShop()==null, phone=isMobile();
-  const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===day.getTime());
-  const duebar=state.calMode==='day'&&dues.length?`<div class="card duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`:'';
-  const legend=`<div class="legend"><span><i style="background:var(--surface);border:1.5px dashed var(--accent)"></i>来店・確認まだ</span><span><i style="background:var(--accent-soft);border:1.5px solid var(--accent)"></i>来店・確認済み</span><span><i style="background:var(--ok-soft)"></i>来店済み</span><span><i style="background:var(--surface-2);border:1.5px solid var(--line-2)"></i>スタッフの予定</span>${state.calMode==='day'?'<span>左の数字＝その時間に接客できる人</span>':''}${phone?'':'<span>札はつかんで動かせます</span>'}</div>`;
+function vCalMobile(){
+  const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null;
   if(state.calMode==='day'){
-    const title=fmtD(day)+(dayDiff(day)===0?'（今日）':'');
-    return calTools(shop,title,hq)+`<div class="agenda">${duebar}${vDayHTML(shop,day,phone)}${legend}</div>`;
+    const vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY, future=dayDiff(day)>=0, isToday=dayDiff(day)===0, title=fmtD(day)+(isToday?'（今日）':'');
+    const PH=52, HT=(H1-H0)*PH, S=staffOf(shop);
+    const top=d=>((d.getHours()*60+d.getMinutes())-H0*60)/60*PH, hgt=m=>Math.max(m/60*PH-2,20);
+    const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
+    const duebar=dues.length?`<div class="card duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`:'';
+    const F=freeCounts(shop,day,vs), hours=[...Array(H1-H0)].map((_,i)=>Math.min(F[i*2],F[i*2+1]));
+    const gut=`<div class="vcol vgut" style="height:${HT}px">${hours.map((n,i)=>`<span class="${future?freeCls(n):''}" style="top:${i*PH}px">${H0+i}${future?`<i>${n}</i>`:''}</span>`).join('')}</div>`;
+    const items=vs.map(q=>{const v=q.visit;return {q,at:v.at,dur:v.dur,lw:0}}); const nl=lanes(items);
+    const vblocks=items.map(it=>{const q=it.q,v=q.visit, cls=v.result==='来店'?'done':v.result?'off':v.confirmed?'conf':'', w=100/nl;
+      return `<div class="vb ${cls}" data-act="open" data-id="${q.id}" style="top:${top(v.at)+1}px;height:${hgt(v.dur)}px;left:calc(${it.lane*w}% + 2px);right:auto;width:calc(${w}% - 4px)"><b>${esc(q.name)}</b><small>${fmtT(v.at)}${q.cls?' '+q.cls:''}${v.again?' 再来':''}${v.result==='来店'?' 済':v.result?' '+v.result:v.confirmed?'':' 確認まだ'}</small></div>`}).join('');
+    const now=(Date.now()-a)/MIN-H0*60, nowline=isToday&&now>0&&now<(H1-H0)*60?`<div class="vnow" style="top:${now/60*PH}px"></div>`:'';
+    const vcol=`<div class="vcol${future?' addable':''}" data-vcol="visit" data-day="${a}" style="height:${HT}px">${vblocks}${nowline}</div>`;
+    const scols=S.map(st=>{const ts=TASKS.filter(t=>t.staff===st.id&&t.at>=a&&t.at<b), at_=attOf(st.id,day), off=isOff(at_);
+      return `<div class="vcol${off?' off':future?' addable':''}" data-vcol="staff" data-staff="${st.id}" data-day="${a}" style="height:${HT}px">${ts.map(t=>`<div class="vb task${t.done?' fin':''}" data-act="task-edit" data-id="${t.id}" style="top:${top(t.at)+1}px;height:${hgt(t.dur)}px"><b>${esc(t.title)}</b><small>${fmtT(t.at)}〜${fmtT(new Date(t.at.getTime()+t.dur*MIN))}</small></div>`).join('')}${nowline}</div>`}).join('');
+    const heads=`<div></div><div>来店<small>${vs.length}件</small></div>`+S.map(st=>{const at_=attOf(st.id,day), off=isOff(at_);return `<div class="${off?'off':''}">${esc(st.name)}<small class="att ${at_.s}">${attLabel(at_)||'　'}</small></div>`}).join('');
+    const cols=`34px minmax(92px,1.7fr) repeat(${S.length},minmax(0,1fr))`;
+    return calTools(shop,title,hq)+`<div class="agenda">${duebar}
+      <div class="card vg-wrap"><div class="vg-sum"><span>${attSummary(shop,day)}</span>${future?`<button class="btn sm" data-act="visit-new" style="margin-left:auto">${IC.plus}来店</button>`:''}</div>
+        <div class="vg" style="--ph:${PH}px;grid-template-columns:${cols}"><div class="vg-h">${heads}</div><div class="vg-b">${gut}${vcol}${scols}</div></div></div>
+      <div class="legend"><span><i style="background:var(--surface);border:1.5px dashed var(--accent)"></i>確認まだ</span><span><i style="background:var(--accent-soft);border:1.5px solid var(--accent)"></i>確認済み</span><span><i style="background:var(--ok-soft)"></i>来店済み</span><span><i style="background:var(--surface-2);border:1.5px solid var(--line-2)"></i>予定</span>${future?'<span>左の数字＝その時間に接客できる人</span>':''}</div>
+    </div>`;
   }
   const wk=addD(day,-((day.getDay()+6)%7)), days=[...Array(7)].map((_,i)=>addD(wk,i)), title=fmtD(days[0])+'〜'+fmtD(days[6]);
-  if(phone){
-    const cards=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0, offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
-      return `<div class="card ag-card"><div class="ag-h${t?' today':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?'　今日':''}</button><small>来店 ${vs.length}件${offs.length?'　休み：'+esc(offs.join('・')):''}</small></div>${vs.map(q=>agRow(q,true)).join('')}</div>`}).join('');
-    return calTools(shop,title,hq)+`<div class="agenda">${cards}</div>`;
-  }
-  return calTools(shop,title,hq)+`<div class="agenda">${vWeekHTML(shop,days)}${legend}</div>`;
+  const cards=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0, offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
+    return `<div class="card ag-card"><div class="ag-h${t?' today':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?'　今日':''}</button><small>来店 ${vs.length}件${offs.length?'　休み：'+esc(offs.join('・')):''}</small></div>${vs.map(q=>agRow(q,true)).join('')}</div>`}).join('');
+  return calTools(shop,title,hq)+`<div class="agenda">${cards}</div>`;
 }
+function vCal(){
+  if(isMobile())return vCalMobile();
+  SLOT=Math.max(34,Math.floor(((view.clientWidth||1000)-136)/((H1-H0)*2)));
+  const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null, W=(H1-H0)*2*SLOT;
+  const head=`<div class="trow thead"><div class="tlab"></div><div class="tline" style="width:${W}px">${[...Array(H1-H0)].map((_,i)=>`<span style="left:${i*2*SLOT}px">${H0+i}:00</span>`).join('')}</div></div>`;
+  let rows='', title='', duebar='';
+  if(state.calMode==='day'){
+    const isToday=dayDiff(day)===0, vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY;
+    title=fmtD(day)+(isToday?'（今日）':'');
+    const groups=[...CLS,...(vs.some(q=>!q.cls)?[null]:[])];
+    rows=`<div class="tsep"><span>来店（分類別）　${vs.length}件</span></div>`+groups.map(c=>{const L=vs.filter(q=>(q.cls||null)===c);
+        return trow(`<div class="tlab"><span>${c||'分類なし'}<small style="display:inline;margin-left:6px">${L.length}件</small></span>${c?`<button class="linkbtn" data-act="visit-new" data-cls="${c}">＋ 来店</button>`:''}</div>`,`data-day="${a}" data-cls="${c||''}"`,L.map(q=>vBlock(q,false)),isToday,dayDiff(day)>=0?'v':false)}).join('')
+      +`<div class="tsep"><span>スタッフの予定${attSummary(shop,day)}</span></div>`+freeRow(shop,day,vs,isToday)+staffOf(shop).map(s=>{const ts=TASKS.filter(t=>t.staff===s.id&&t.at>=a&&t.at<b), at=attOf(s.id,day), off=isOff(at);
+        return trow(`<div class="tlab${s.id===me?' me':''}">${esc(s.name)}${s.id===me?'<small>自分</small>':''}${attLabel(at)?`<small class="att ${at.s}">${attLabel(at)}</small>`:''}${off?'':`<button class="linkbtn" data-act="task-new" data-staff="${s.id}">＋ 予定</button>`}</div>`,`data-day="${a}" data-staff="${s.id}"${off?' data-off="1"':''}`,ts.map(tBlock),isToday,!off)}).join('');
+    const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
+    duebar=`<div class="duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`;
+  }else{
+    const wk=addD(day,-((day.getDay()+6)%7)), days=[...Array(7)].map((_,i)=>addD(wk,i));
+    title=fmtD(days[0])+'〜'+fmtD(days[6]);
+    rows=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0;
+      const offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
+      return trow(`<div class="tlab${t?' me':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?'　今日':''}</button><small>来店 ${vs.length}件</small>${offs.length?`<small class="att off">休み：${esc(offs.join('・'))}</small>`:''}</div>`,`data-day="${d.getTime()}"`,vs.map(q=>vBlock(q,true)),t,false)}).join('');
+  }
+  const step=state.calMode==='day'?1:7;
+  return `<div class="vhead"><div><h1>カレンダー<small>${shopName(shop)}　${title}</small></h1></div>
+    <div class="tools">${hq?`<select class="sel" id="cal-shop" data-cf="shop" aria-label="店舗">${SHOPS.map(s=>opt(s.id,s.name,shop)).join('')}</select>`:''}
+      <div class="segbtn" role="group" aria-label="表示の切り替え"><button data-act="cal-mode" data-m="day" aria-pressed="${state.calMode==='day'}">日</button><button data-act="cal-mode" data-m="week" aria-pressed="${state.calMode==='week'}">週</button></div>
+      <button class="btn sm" data-act="cal-go" data-n="${-step}">前へ</button><button class="btn sm" data-act="cal-go" data-n="0">今日</button><button class="btn sm" data-act="cal-go" data-n="${step}">次へ</button></div></div>
+  <div class="card" style="overflow:hidden">${duebar}<div class="tlwrap"><div class="tlgrid" id="tlgrid" style="--slot:${SLOT}px">${head}${rows}</div></div></div>
+  <div class="legend"><span><i style="background:var(--surface);border:1.5px dashed var(--accent)"></i>来店・確認まだ</span><span><i style="background:var(--accent-soft);border:1.5px solid var(--accent)"></i>来店・確認済み</span><span><i style="background:var(--ok-soft)"></i>来店済み</span><span><i style="background:var(--surface-2);border:1.5px solid var(--line-2)"></i>スタッフの予定</span></div>`;
+}
+
 /* ---------- メール（お客様とのやり取りだけ。業者・本部のメールは Outlook のまま） ---------- */
 const MAILK=new Set(['in','reply','mail']);
 const lastMail=q=>{for(let i=q.acts.length-1;i>=0;i--)if(MAILK.has(q.acts[i].k))return q.acts[i];return null};
@@ -1769,49 +1765,47 @@ document.addEventListener('change',e=>{
   }
 });
 
-/* カレンダーの札をつかんで動かす（縦の表。上下＝時刻、左右＝分類や担当） */
+/* カレンダーの札をつかんで動かす */
 view.addEventListener('pointerdown',e=>{
-  if(e.button!==0||e.target.closest('button')||isMobile())return;
-  const blk=e.target.closest('.vb'); if(!blk||!blk.dataset.kind)return;
-  const col=blk.closest('.vcol'); if(!col)return;
-  drag={el:blk,kind:blk.dataset.kind,id:+blk.dataset.id,x:e.clientX,y:e.clientY,moved:false,ph:parseFloat(getComputedStyle(col).getPropertyValue('--ph'))||56};
+  if(e.button!==0||e.target.closest('.tdone'))return;
+  const blk=e.target.closest('.tblk'); if(!blk)return;
+  drag={el:blk,kind:blk.dataset.kind,id:+blk.dataset.id,x:e.clientX,y:e.clientY,moved:false};
 });
-const colAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.vcol:not(.vgut)'):null};
+const rowAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.trow:not(.thead)'):null};
 window.addEventListener('pointermove',e=>{
+  const t=$('#tip'), tp=e.target.closest?e.target.closest('[data-tip]'):null;
+  if(tp&&!drag){t.textContent=tp.dataset.tip;t.hidden=false;const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(window.innerWidth-w-8,e.clientX+12))+'px';t.style.top=(e.clientY+16)+'px'}else t.hidden=true;
   if(!drag)return;
   const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
   if(!drag.moved){if(Math.hypot(dx,dy)<6)return;drag.moved=true;drag.el.classList.add('moving')}
   e.preventDefault();
   drag.el.style.transform=`translate(${dx}px,${dy}px)`;
-  $$('.vcol.over').forEach(c=>c.classList.remove('over'));
-  const c=colAt(e.clientX,e.clientY); if(c)c.classList.add('over');
+  $$('.trow.over').forEach(c=>c.classList.remove('over'));
+  const r=rowAt(e.clientX,e.clientY); if(r)r.classList.add('over');
 });
 function endDrag(e,cancel){
   if(!drag)return; const d=drag; drag=null;
-  const col=d.moved&&!cancel?colAt(e.clientX,e.clientY):null;
-  $$('.vcol.over').forEach(c=>c.classList.remove('over'));
-  d.el.classList.remove('moving'); d.el.style.transform='';
-  if(!d.moved)return;                      /* そのままクリックとして扱う（開く） */
+  const row=d.moved&&!cancel?rowAt(e.clientX,e.clientY):null;
+  $$('.trow.over').forEach(c=>c.classList.remove('over'));
+  d.el.classList.remove('moving');
   suppress=true;setTimeout(()=>{suppress=false},0);
-  if(cancel||!col){render();return}
-  const shift=Math.round((e.clientY-d.y)/d.ph*2)*30;
-  const move=(old,dur)=>{let m=old.getHours()*60+old.getMinutes()+shift;m=Math.max(H0*60,Math.min(H1*60-dur,m));const w=col.dataset.day?new Date(+col.dataset.day):d0(old);w.setHours(Math.floor(m/60),m%60,0,0);return w};
+  if(!d.moved){if(d.kind==='visit')openCust(d.id);else{const t=TASKS.find(x=>x.id===d.id);if(t)openTask(t)}return}
+  if(cancel){render();return}
+  const shift=Math.round((e.clientX-d.x)/SLOT)*30;
+  const move=(old,dur)=>{let m=old.getHours()*60+old.getMinutes()+shift;m=Math.max(H0*60,Math.min(H1*60-dur,m));const w=row&&row.dataset.day?new Date(+row.dataset.day):d0(old);w.setHours(Math.floor(m/60),m%60,0,0);return w};
   if(d.kind==='visit'){
-    if(col.dataset.vcol!=='visit'){render();toast('来店はスタッフの列には置けません');return}
     const q=byId(d.id), v=q&&q.visit; if(!v){render();return}
-    const when=move(v.at,v.dur), nc=col.dataset.cls!==undefined?(col.dataset.cls||null):(q.cls||null);
+    const when=move(v.at,v.dur), nc=row&&row.dataset.cls!==undefined?(row.dataset.cls||null):(q.cls||null);
     const tCh=when.getTime()!==v.at.getTime(), cCh=nc!==(q.cls||null);
     if(!tCh&&!cCh){render();return}
     if(v.result&&tCh){render();toast('結果を記録した来店は動かせません');return}
-    if(when<d0()){render();toast('過去には動かせません');return}
     snap(q); const msg=[];
     if(tCh){const old=fmtD(v.at)+' '+fmtT(v.at);v.at=when;log(q,'sys','来店予約を '+old+' から '+fmtD(when)+' '+fmtT(when)+' に変更');msg.push(fmtD(when)+' '+fmtT(when))}
     if(cCh){log(q,'sys','分類を'+(q.cls||'未設定')+'から'+(nc||'未設定')+'に変更');q.cls=nc;msg.push('分類 '+(nc||'未設定'))}
     render();toast(q.name+'様の来店を '+msg.join('・')+' に変えました',true);
   }else{
-    if(col.dataset.vcol!=='staff'){render();toast('予定は来店の列には置けません');return}
     const t=TASKS.find(x=>x.id===d.id); if(!t){render();return}
-    t.at=move(t.at,t.dur); t.staff=+col.dataset.staff;
+    t.at=move(t.at,t.dur); if(row&&row.dataset.staff)t.staff=+row.dataset.staff;
     render();toast('予定を '+fmtT(t.at)+'・'+sname(t.staff)+' に動かしました');
   }
 }
@@ -1824,7 +1818,7 @@ window.matchMedia('(max-width:860px)').addEventListener('change',()=>{if(state.v
 /* ===================== 本番：Supabase 接続層 =====================
    画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
    render のあとに差分だけ保存する。他の端末の変更は Realtime で受けて差し替える。 */
-const APP_VER='0.6';
+const APP_VER='0.7';
 const CFG=window.HK_CONFIG||{};
 const SB=window.supabase.createClient(CFG.url,CFG.key);
 let idSeq=Math.floor(Math.random()*1000), idLast=0;
