@@ -313,6 +313,49 @@ select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-righ
 .bagent{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .propst{font-size:12.5px;color:var(--muted)}
 .sugi span{flex:none;font-weight:600}.sugi small{flex:1;white-space:normal;text-align:left;line-height:1.4}
+/* カレンダーからお客様を選ぶ */
+.pick{display:grid;gap:8px}
+.pick .search{flex:none;width:100%}
+.plist{display:grid;gap:4px;max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r-s);padding:4px}
+.pitem{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:var(--r-s)}
+.pitem:hover,.pitem:focus{background:var(--accent-soft);outline:0}
+.pitem b{font-size:14.5px}
+.pitem small{display:block;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .pr{font-size:12px;color:var(--muted);white-space:nowrap;text-align:right}
+.pempty{padding:16px;color:var(--muted);font-size:13.5px;text-align:center}
+.tline.vadd{cursor:cell}
+/* スマホのカレンダー（縦の一覧） */
+.agenda{display:grid;gap:12px}
+.ag-card{overflow:hidden}
+.ag-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px;flex-wrap:wrap}
+.ag-h small{font-weight:500;color:var(--muted);margin-left:6px;font-size:12.5px}
+.ag-h.today{background:var(--accent-soft)}
+.ag-row{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.ag-row:last-child{border-bottom:0}
+.ag-t{font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;line-height:1.2}
+.ag-t small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.ag-n{min-width:0}.ag-n b{font-size:14.5px}
+.ag-n small{display:block;color:var(--muted);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag-row.done .ag-t,.ag-row.done .ag-n b{color:var(--muted)}
+.ag-row.off .ag-n b{text-decoration:line-through;color:var(--muted)}
+.ag-empty{padding:16px 14px;color:var(--muted);font-size:13.5px}
+.ag-staff{padding:9px 14px;border-bottom:1px solid var(--line)}
+.ag-staff:last-child{border-bottom:0}
+.ag-staff .nm{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.ag-staff .nm .att{display:inline;font-weight:600}
+.ag-staff.isoff{background:var(--surface-2)}
+.ag-task{display:flex;align-items:center;gap:9px;padding:6px 0 2px 2px;font-size:13.5px}
+.ag-task span[role="button"]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag-task.fin span[role="button"]{text-decoration:line-through;color:var(--muted)}
+.agd{width:20px;height:20px;border:1.5px solid var(--muted);border-radius:4px;background:var(--surface);padding:0;font-size:12px;color:var(--ok);display:grid;place-items:center;flex:none}
+.agd[aria-pressed="true"]{border-color:var(--ok);background:var(--ok-soft)}
+.freebar{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;padding:10px 12px 12px}
+.freebar span{display:grid;place-items:center;height:26px;border-radius:6px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.freebar .h{height:auto;font-size:10px;color:var(--muted);font-weight:500}
+.freebar .ok{background:var(--ok-soft);color:var(--ok)}.freebar .warn{background:var(--warn-soft);color:var(--warn)}.freebar .bad{background:var(--danger-soft);color:var(--danger)}
+/* 絞り込みの開閉ボタンはスマホだけ */
+.ftog{display:none}
+@media (max-width:860px){.ftog{display:inline-flex}}
 /* ログイン */
 .login{max-width:380px;margin:12vh auto 0;padding:28px 26px;display:grid;gap:12px}
 .login h1{font-size:20px;display:flex;align-items:center;gap:10px}
@@ -474,7 +517,24 @@ textarea.inp{min-height:76px;resize:vertical;line-height:1.6;font:inherit;paddin
 }
 @media (max-width:1180px){
   .lhead{display:none}
-  .lrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name st" "inq inq" "next next" "recv act";gap:5px 10px}
+  .lrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name st" "inq inq" "next next" "recv act";gap:4px 10px;padding:11px 14px}
+  .lrow .iel{display:none}
+  .proptools{display:none}
+  .vhead{margin-bottom:12px;align-items:center}
+  .vhead h1{font-size:19px}
+  .vhead .tools{margin-left:auto}
+  .filters{padding:10px 12px}
+  .filters .frow .sel,.filters .frow span{display:none}
+  .filters.open .frow .sel,.filters.open .frow span{display:block}
+  .filters .search{flex:1 1 160px}
+  
+  .ftog b{margin-left:4px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;font-size:11.5px}
+  .kpis{gap:8px}
+  .ag-staff .nm .linkbtn{border:0;background:none;color:var(--accent-text);font-size:12.5px;font-weight:600;padding:0}
+  .duebar{border-bottom:0}
+  .th-head{padding:12px 14px}
+  .msgs{padding:14px}
+  .compose{padding:12px 14px}
   .c-recv{grid-area:recv;font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center}
   .c-recv small{display:inline}
   .c-name{grid-area:name} .c-inq{grid-area:inq} .c-st{grid-area:st;justify-self:end} .c-next{grid-area:next} .c-act{grid-area:act;justify-self:end}
@@ -641,7 +701,7 @@ function importProps(buf){
 const sugWrap=inp=>`<div class="sugwrap">${inp}<div class="sug" hidden></div></div>`;
 const F0=()=>({q:'',shop:'',period:'all',from:'',to:'',media:'',cls:'',owner:'',preset:'all',att:false,fu:false,sort:'new'});
 const hOpen=new Set();
-const state={role:'hq',look:'a',view:HOME,back:HOME,mailId:null,mf:'all',mq:'',mdraft:null,custId:null,f:F0(),rec:null,recForm:null,calMode:'day',calDay:d0(),calShop:1,undo:null};
+const state={role:'hq',look:'a',view:HOME,back:HOME,ffOpen:false,mailId:null,mf:'all',mq:'',mdraft:null,custId:null,f:F0(),rec:null,recForm:null,calMode:'day',calDay:d0(),calShop:1,undo:null};
 try{const l=localStorage.getItem('hk3-look');if(LOOKS[l])state.look=l;state.hist=localStorage.getItem('hk3-hist')==='1'}catch(e){}
 const ME=()=>MEROW&&MEROW.role!=='hq'&&!MEROW.is_shared?MEROW.id:null;
 const myShop=()=>MEROW&&MEROW.role!=='hq'?MEROW.shop_id:null;
@@ -959,17 +1019,19 @@ function bodyHTML(){
   return (L.length?L.map(rowHTML).join(''):'<div class="lempty">該当なし</div>')
     +`<div class="lfoot">${total}件中 ${L.length}件</div>`;
 }
+const fCount=()=>{const f=state.f;return ['shop','period','media','cls','owner'].filter(k=>f[k]&&f[k]!=='all').length+(f.sort!=='new'?1:0)};
 function refreshList(){const c=$('#chips'),b=$('#list-body'),l=$('#lbar'),k=$('#kpis');if(c)c.innerHTML=chipsHTML();if(b)b.innerHTML=bodyHTML();if(l)l.innerHTML=lbarHTML();if(k)k.innerHTML=kpisHTML()}
 function vList(){
   const f=state.f, hq=myShop()==null, sh=scopeShop(), me=ME();
   const staff=sh==null?STAFF:staffOf(sh);
   return `<div class="vhead"><div><h1>反響一覧<small>${hq?(sh==null?'全店舗':shopName(sh)):shopName(sh)}</small></h1></div>
-    <div class="tools">${hq?`<span class="propst">${PROPS?`いえらぶの物件 ${PROPS.length}件（${fmtD(PROPS_AT)} ${fmtT(PROPS_AT)} 取込）`:'物件の候補：未取込'}</span><button class="btn sm" data-act="prop-csv">${PROPS?'物件CSVを取り込み直す':'いえらぶの物件CSVを取り込む'}</button>${PROPS?`<button class="btn sm ghost" data-act="prop-clear">戻す</button>`:''}<input type="file" id="prop-file" accept=".csv,text/csv" hidden>`:''}<button class="btn primary" data-act="new">${IC.plus}問い合わせを登録</button></div></div>
+    <div class="tools">${hq?`<span class="proptools"><span class="propst">${PROPS?`いえらぶの物件 ${PROPS.length}件（${fmtD(PROPS_AT)} ${fmtT(PROPS_AT)} 取込）`:'物件の候補：未取込'}</span><button class="btn sm" data-act="prop-csv">${PROPS?'物件CSVを取り込み直す':'いえらぶの物件CSVを取り込む'}</button>${PROPS?`<button class="btn sm ghost" data-act="prop-clear">戻す</button>`:''}<input type="file" id="prop-file" accept=".csv,text/csv" hidden></span>`:''}<button class="btn primary" data-act="new">${IC.plus}問い合わせを登録</button></div></div>
   <div class="kpis" id="kpis">${kpisHTML()}</div>
   <div class="card list">
     <div class="ltabs"><div class="presets" id="chips" role="group" aria-label="状況で絞り込む">${chipsHTML()}</div><div class="lbar" id="lbar">${lbarHTML()}</div></div>
-    <div class="filters"><div class="frow">
+    <div class="filters${state.ffOpen?' open':''}"><div class="frow">
       <div class="search">${IC.search}<input id="f-q" data-ff="q" type="search" value="${esc(f.q)}" placeholder="名前・電話番号・物件でさがす" autocomplete="off" aria-label="反響をさがす"></div>
+      <button class="btn sm ftog" data-act="filt-toggle" aria-expanded="${!!state.ffOpen}">絞り込み${fCount()?` <b>${fCount()}</b>`:''}</button>
       ${hq?`<select class="sel" id="f-shop" data-ff="shop" aria-label="店舗">${opt('','全店舗',f.shop)}${SHOPS.map(s=>opt(s.id,s.name,f.shop)).join('')}</select>`:''}
       <select class="sel" id="f-period" data-ff="period" aria-label="受信日">${[['all','受信日：すべて'],['today','今日'],['7','直近7日'],['30','直近30日'],['custom','日付を指定']].map(([v,l])=>opt(v,l,f.period)).join('')}</select>
       ${f.period==='custom'?`<input class="sel" type="date" id="f-from" data-ff="from" value="${f.from}" aria-label="受信日の開始"><span>〜</span><input class="sel" type="date" id="f-to" data-ff="to" value="${f.to}" aria-label="受信日の終了">`:''}
@@ -1020,7 +1082,7 @@ function tBlock(t){
 }
 function trow(lab,attrs,blocks,today,addable){
   const n=lanes(blocks), W=(H1-H0)*2*SLOT, now=(Date.now()-d0().getTime())/MIN-H0*60;
-  return `<div class="trow" ${attrs}>${lab}<div class="tline${addable?' addable':''}" style="width:${W}px;height:${blocks.length?n*LH+4:36}px">${today&&now>0&&now<(H1-H0)*60?`<i class="nowline" style="left:${now/30*SLOT}px"></i>`:''}${blocks.map(b=>`<div class="tblk ${b.cls}" data-kind="${b.kind}" data-id="${b.id}" style="left:${xOf(b.at)+1}px;width:${Math.max(b.dur/30*SLOT-3,26)}px;top:${b.lane*LH+4}px" data-tip="${esc(b.tip)}">${b.inner}</div>`).join('')}</div></div>`;
+  return `<div class="trow" ${attrs}>${lab}<div class="tline${addable==='v'?' vadd':addable?' addable':''}" style="width:${W}px;height:${blocks.length?n*LH+4:36}px">${today&&now>0&&now<(H1-H0)*60?`<i class="nowline" style="left:${now/30*SLOT}px"></i>`:''}${blocks.map(b=>`<div class="tblk ${b.cls}" data-kind="${b.kind}" data-id="${b.id}" style="left:${xOf(b.at)+1}px;width:${Math.max(b.dur/30*SLOT-3,26)}px;top:${b.lane*LH+4}px" data-tip="${esc(b.tip)}">${b.inner}</div>`).join('')}</div></div>`;
 }
 function attSummary(shop,day){
   const S=staffOf(shop), today=dayDiff(day)===0;
@@ -1029,17 +1091,58 @@ function attSummary(shop,day){
   const n=k=>S.filter(s=>(ATT[s.id]||{s:'none'}).s===k).length;
   return `<span class="attsum">出勤 ${n('in')+n('out')}・休み ${n('off')+n('leave')}・未打刻 ${n('none')}　<span style="font-weight:400">Jinjerの打刻 ${ATT_AT}時点</span></span>`;
 }
-function freeRow(shop,day,vs,today){
-  const S=staffOf(shop), N=(H1-H0)*2, W=N*SLOT, a=day.getTime(), cells=[];
-  const ts=TASKS.filter(t=>t.shop===shop&&!t.done&&t.at>=a&&t.at<a+DAY), vv=vs.filter(q=>!q.visit.result||q.visit.result==='来店');
+function freeCounts(shop,day,vs){
+  const S=staffOf(shop), N=(H1-H0)*2, a=day.getTime(), out=[];
+  const ts=TASKS.filter(t=>t.shop===shop&&!t.done&&t.at>=a&&t.at<a+DAY), vv=vs.filter(q=>!q.visit.result||q.visit.result==='来店'), here=S.filter(x=>present(x.id,day));
   for(let i=0;i<N;i++){const s0=a+(H0*60+i*30)*MIN, s1=s0+30*MIN;
-    const here=S.filter(x=>present(x.id,day)), busyIds=new Set(ts.filter(t=>t.at<s1&&t.at.getTime()+t.dur*MIN>s0).map(t=>t.staff));
+    const busyIds=new Set(ts.filter(t=>t.at<s1&&t.at.getTime()+t.dur*MIN>s0).map(t=>t.staff));
     let n=here.filter(x=>!busyIds.has(x.id)).length;
     vv.forEach(q=>{const v=q.visit;if(v.at<s1&&v.at.getTime()+v.dur*MIN>s0)n--});
-    cells.push(`<span class="${n>=2?'ok':n===1?'warn':'bad'}" style="left:${i*SLOT+2}px;width:${SLOT-4}px" title="${H0+Math.floor(i/2)}:${i%2?'30':'00'}　接客できる人 ${Math.max(n,0)}人">${Math.max(n,0)}</span>`)}
+    out.push(Math.max(n,0))}
+  return out;
+}
+const freeCls=n=>n>=2?'ok':n===1?'warn':'bad';
+function freeRow(shop,day,vs,today){
+  const N=(H1-H0)*2, W=N*SLOT, cells=[], F=freeCounts(shop,day,vs);
+  for(let i=0;i<N;i++){const n=F[i];
+    cells.push(`<span class="${freeCls(n)}" style="left:${i*SLOT+2}px;width:${SLOT-4}px" title="${H0+Math.floor(i/2)}:${i%2?'30':'00'}　接客できる人 ${n}人">${n}</span>`)}
   return `<div class="trow"><div class="tlab"><span>接客できる人</span><small>出勤−予定−来店</small></div><div class="tline frees" style="width:${W}px;height:34px">${cells.join('')}</div></div>`;
 }
+const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
+function calTools(shop,title,hq){
+  const step=state.calMode==='day'?1:7;
+  return `<div class="vhead"><div><h1>カレンダー<small>${shopName(shop)}　${title}</small></h1></div>
+    <div class="tools">${hq?`<select class="sel" id="cal-shop" data-cf="shop" aria-label="店舗">${SHOPS.map(s=>opt(s.id,s.name,shop)).join('')}</select>`:''}
+      <div class="segbtn" role="group" aria-label="表示の切り替え"><button data-act="cal-mode" data-m="day" aria-pressed="${state.calMode==='day'}">日</button><button data-act="cal-mode" data-m="week" aria-pressed="${state.calMode==='week'}">週</button></div>
+      <button class="btn sm" data-act="cal-go" data-n="${-step}">前へ</button><button class="btn sm" data-act="cal-go" data-n="0">今日</button><button class="btn sm" data-act="cal-go" data-n="${step}">次へ</button></div></div>`;
+}
+function agRow(q,showCls){
+  const v=q.visit, st=v.result==='来店'?'来店済み':v.result?v.result:v.confirmed?'確認済み':'確認まだ', tone=v.result==='来店'?'ok':v.result?'':v.confirmed?'accent':'warn';
+  return `<div class="ag-row${v.result==='来店'?' done':v.result?' off':''}" data-act="open" data-id="${q.id}" role="button" tabindex="0"><div class="ag-t">${fmtT(v.at)}<small>${v.dur}分</small></div><div class="ag-n"><b>${esc(q.name)}</b>${showCls&&q.cls?`<span class="tag cls" style="margin-left:6px">${q.cls}</span>`:''}${v.again?'<span class="tag re">再来</span>':''}<small>${esc(sub(q))||'—'}${v.staff?'　接客 '+esc(sname(v.staff)):''}</small></div><span class="pill ${tone} st">${st}</span></div>`;
+}
+function vCalMobile(){
+  const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null;
+  if(state.calMode==='day'){
+    const vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY, future=dayDiff(day)>=0, title=fmtD(day)+(dayDiff(day)===0?'（今日）':'');
+    const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
+    const duebar=dues.length?`<div class="card duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`:'';
+    const F=freeCounts(shop,day,vs), hours=[...Array(H1-H0)].map((_,i)=>Math.min(F[i*2],F[i*2+1]));
+    const free=`<div class="freebar">${hours.map((n,i)=>`<span class="h">${H0+i}</span>`).join('')}${hours.map(n=>`<span class="${freeCls(n)}">${n}</span>`).join('')}</div>`;
+    const staffCards=staffOf(shop).map(s=>{const ts=TASKS.filter(t=>t.staff===s.id&&t.at>=a&&t.at<b).sort((x,y)=>x.at-y.at), at_=attOf(s.id,day), off=isOff(at_);
+      return `<div class="ag-staff${off?' isoff':''}"><div class="nm"><span>${esc(s.name)}${s.id===me?'<small class="mnote">　自分</small>':''}</span>${attLabel(at_)?`<small class="att ${at_.s}">${attLabel(at_)}</small>`:''}${off?'':`<button class="linkbtn" style="margin-left:auto" data-act="task-new" data-staff="${s.id}">＋ 予定</button>`}</div>${ts.map(t=>`<div class="ag-task${t.done?' fin':''}"><button class="agd" data-act="task-done" data-id="${t.id}" aria-pressed="${t.done}" aria-label="${t.done?'済みを取り消す':'済みにする'}">${t.done?'✓':''}</button><span data-act="task-edit" data-id="${t.id}" role="button" tabindex="0"><b class="num">${fmtT(t.at)}</b>　${esc(t.title)}</span></div>`).join('')}</div>`}).join('');
+    return calTools(shop,title,hq)+`<div class="agenda">${duebar}
+      <div class="card ag-card"><div class="ag-h"><span>来店<small>${vs.length}件</small></span>${future?`<button class="btn sm" data-act="visit-new">${IC.plus}来店</button>`:''}</div>${vs.map(q=>agRow(q,true)).join('')||'<div class="ag-empty">来店の予定はありません</div>'}</div>
+      ${future?`<div class="card ag-card"><div class="ag-h"><span>接客できる人<small>出勤−予定−来店</small></span></div>${free}</div>`:''}
+      <div class="card ag-card"><div class="ag-h"><span>スタッフの予定${attSummary(shop,day)}</span></div>${staffCards||'<div class="ag-empty">スタッフがいません</div>'}</div>
+    </div>`;
+  }
+  const wk=addD(day,-((day.getDay()+6)%7)), days=[...Array(7)].map((_,i)=>addD(wk,i)), title=fmtD(days[0])+'〜'+fmtD(days[6]);
+  const cards=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0, offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
+    return `<div class="card ag-card"><div class="ag-h${t?' today':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?'　今日':''}</button><small>来店 ${vs.length}件${offs.length?'　休み：'+esc(offs.join('・')):''}</small></div>${vs.map(q=>agRow(q,true)).join('')}</div>`}).join('');
+  return calTools(shop,title,hq)+`<div class="agenda">${cards}</div>`;
+}
 function vCal(){
+  if(isMobile())return vCalMobile();
   SLOT=Math.max(34,Math.floor(((view.clientWidth||1000)-136)/((H1-H0)*2)));
   const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null, W=(H1-H0)*2*SLOT;
   const head=`<div class="trow thead"><div class="tlab"></div><div class="tline" style="width:${W}px">${[...Array(H1-H0)].map((_,i)=>`<span style="left:${i*2*SLOT}px">${H0+i}:00</span>`).join('')}</div></div>`;
@@ -1049,7 +1152,7 @@ function vCal(){
     title=fmtD(day)+(isToday?'（今日）':'');
     const groups=[...CLS,...(vs.some(q=>!q.cls)?[null]:[])];
     rows=`<div class="tsep"><span>来店（分類別）　${vs.length}件</span></div>`+groups.map(c=>{const L=vs.filter(q=>(q.cls||null)===c);
-        return trow(`<div class="tlab"><span>${c||'分類なし'}<small style="display:inline;margin-left:6px">${L.length}件</small></span>${c?`<button class="linkbtn" data-act="visit-new" data-cls="${c}">＋ 来店</button>`:''}</div>`,`data-day="${a}" data-cls="${c||''}"`,L.map(q=>vBlock(q,false)),isToday,false)}).join('')
+        return trow(`<div class="tlab"><span>${c||'分類なし'}<small style="display:inline;margin-left:6px">${L.length}件</small></span>${c?`<button class="linkbtn" data-act="visit-new" data-cls="${c}">＋ 来店</button>`:''}</div>`,`data-day="${a}" data-cls="${c||''}"`,L.map(q=>vBlock(q,false)),isToday,dayDiff(day)>=0?'v':false)}).join('')
       +`<div class="tsep"><span>スタッフの予定${attSummary(shop,day)}</span></div>`+freeRow(shop,day,vs,isToday)+staffOf(shop).map(s=>{const ts=TASKS.filter(t=>t.staff===s.id&&t.at>=a&&t.at<b), at=attOf(s.id,day), off=isOff(at);
         return trow(`<div class="tlab${s.id===me?' me':''}">${esc(s.name)}${s.id===me?'<small>自分</small>':''}${attLabel(at)?`<small class="att ${at.s}">${attLabel(at)}</small>`:''}${off?'':`<button class="linkbtn" data-act="task-new" data-staff="${s.id}">＋ 予定</button>`}</div>`,`data-day="${a}" data-staff="${s.id}"${off?' data-off="1"':''}`,ts.map(tBlock),isToday,!off)}).join('');
     const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
@@ -1328,8 +1431,8 @@ function paintSlots(q){
   const w=$('#bk-warn'), n=b?slotCount(q,d0(b.when),b.when.getHours()):0;
   w.hidden=!n; if(n)w.textContent='この時間帯にはすでに'+n+'件の来店予約があります。接客できる人数を確認してください。';
 }
-function openBook(q){
-  const v=openVisit(q), base=v?v.at:at(1,11,0), du=v?v.dur:60;
+function openBook(q,pre={}){
+  const v=openVisit(q), base=v?v.at:(pre.at||at(1,11,0)), du=v?v.dur:60; if(pre.cls&&!q.cls)q.cls=pre.cls;
   sheet(esc(q.name)+'様の'+((v?v.again:doneVisits(q).length>0)?'再来の予約':'来店予約'),`
     <div class="f4"><label class="f">日付<input class="inp" type="date" id="bk-d" value="${iso(base)}" min="${iso(d0())}" required></label>
     <label class="f">時間<select class="sel" id="bk-t">${timeOpts(fmtT(base))}</select></label>
@@ -1409,6 +1512,30 @@ function findDup(shop,tel,mail){
   const t=String(tel||'').replace(/\D/g,''), m=String(mail||'').trim().toLowerCase();
   return DB.find(q=>q.shop===shop&&((t.length>=10&&q.tel.replace(/\D/g,'')===t)||(m&&q.email.toLowerCase()===m)))||null;
 }
+/* カレンダーからの来店追加：まず既存のお客様から選ぶ。候補は「来店が入っていない・進行中」を上に */
+let pickPre=null;
+function pickList(k){
+  k=norm(k); const shop=calShop();
+  const L=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&(!k||[q.name,q.kana,q.tel,q.email,q.property].some(x=>norm(x).includes(k))));
+  const rank=q=>openVisit(q)?3:q.stage<=1?0:q.stage===3?1:2;
+  L.sort((a,b)=>rank(a)-rank(b)||(b.received-a.received));
+  return L.slice(0,k?30:12);
+}
+function pickHTML(k){
+  const L=pickList(k);
+  if(!L.length)return `<div class="pempty">${k?'該当するお客様がいません':'お客様がいません'}</div>`;
+  return L.map(q=>{const v=openVisit(q), lc=lastContact(q);
+    return `<button type="button" class="pitem" data-act="pk-cust" data-id="${q.id}"><span class="av">${esc(q.name[0])}</span><span style="min-width:0"><b>${esc(q.name)}</b>${q.cls?`<span class="tag cls" style="margin-left:6px">${q.cls}</span>`:''}${subSt(q)}<small>${esc(sub(q))||'—'}</small></span><span class="pr">${stagePill(q)}<br>${v?'来店 '+fmtDay(v.at)+' '+fmtT(v.at):lc?'最終 '+fmtDay(lc.t):'受信 '+fmtDay(q.received)}</span></button>`}).join('');
+}
+function openPick(pre={}){
+  pickPre=Object.assign({day:state.calDay},pre);
+  const when=pre.at?fmtD(pre.at)+' '+fmtT(pre.at):fmtD(state.calDay);
+  sheet('来店を入れる　'+esc(shopName(calShop()))+'　'+when+(pre.cls?'　'+esc(pre.cls):''),`
+    <div class="pick"><div class="search">${IC.search}<input id="pk-q" placeholder="名前・電話番号・物件でさがす" autocomplete="off" aria-label="お客様をさがす"></div>
+    <div class="plist" id="pk-list">${pickHTML('')}</div>
+    <div class="rowwrap" style="margin-top:0"><button type="button" class="btn" data-act="pk-new">${IC.plus}新しいお客様として登録</button><span class="mnote">反響帳にいないお客様はこちら</span></div></div>`,null,null,{wide:true});
+  const q=$('#pk-q'); q.addEventListener('input',()=>{$('#pk-list').innerHTML=pickHTML(q.value)}); q.focus();
+}
 function openNew(pre={}){
   const shop0=pre.shop??scopeShop()??1, me=ME(), hq=myShop()==null;
   const whoOpts=s=>staffOf(s).map(x=>opt(x.id,x.name,me??'')).join('');
@@ -1425,7 +1552,7 @@ function openNew(pre={}){
     <label class="f">物件（決まっていれば）${sugWrap('<input class="inp" id="nw-prop" data-sug="1" maxlength="60" autocomplete="off" placeholder="物件名か駅名を入れると候補が出ます">')}</label>
     <label class="f">聞いた内容<input class="inp" id="nw-msg" maxlength="200" placeholder="例：駅に近い1Kを希望。来週に内見したい"></label>
     <div class="f2"><label class="f">来店日（決まっていれば）<input class="inp" type="date" id="nw-vd" value="${pre.day?iso(pre.day):''}" min="${iso(d0())}"></label>
-    <label class="f">来店の時間<select class="sel" id="nw-vt">${timeOpts('11:00')}</select></label></div>`,
+    <label class="f">来店の時間<select class="sel" id="nw-vt">${timeOpts(pre.time||'11:00')}</select></label></div>`,
     ()=>{
       const shop=hq?+$('#nw-shop').value:shop0, name=$('#nw-name').value.trim(), tel=$('#nw-tel').value.trim(), mail=$('#nw-mail').value.trim();
       const warn=m=>{const d=$('#nw-dup');d.hidden=false;d.textContent=m};
@@ -1511,7 +1638,11 @@ const A={
   'task-done':el=>{const t=TASKS.find(x=>x.id===+el.dataset.id);if(t){t.done=!t.done;render()}},
   'task-del':el=>{TASKS=TASKS.filter(x=>x.id!==+el.dataset.id);closeSheet();render();toast('予定を消しました')},
   new:()=>openNew(),
-  'visit-new':el=>openNew({cls:el.dataset.cls,day:state.calDay,shop:calShop()}),
+  'visit-new':el=>openPick({cls:el.dataset.cls||null,at:el.dataset.at?new Date(+el.dataset.at):null}),
+  'filt-toggle':()=>{state.ffOpen=!state.ffOpen;render()},
+  'task-edit':el=>{const t=TASKS.find(x=>x.id===+el.dataset.id);if(t)openTask(t)},
+  'pk-cust':el=>{const q=byId(+el.dataset.id);if(!q)return;const p=pickPre||{};closeSheet();openBook(q,{at:p.at||(p.day?new Date(p.day.getTime()+11*3600e3):null),cls:p.cls})},
+  'pk-new':()=>{const p=pickPre||{};closeSheet();openNew({cls:p.cls,day:p.at||state.calDay,shop:calShop(),time:p.at?fmtT(p.at):null})},
   'mail-demo':()=>{openMailDemo()},
   'kpi-new':()=>{state.f.preset=state.f.preset==='new'?'all':'new';state.rec=null;refreshList()},
   'ml-open':el=>{state.mailId=+el.dataset.id;state.mdraft=null;render();const m=$('#msgs');if(m)m.scrollTop=m.scrollHeight},
@@ -1546,9 +1677,10 @@ document.addEventListener('click',e=>{
   if(el&&A[el.dataset.act]){A[el.dataset.act](el,e);return}
   if(e.target===overlay){A['sheet-x']();return}
   /* 名前の行の空いたところを押したら、その時刻で予定を入れる */
-  if(e.target.classList&&e.target.classList.contains('addable')){
+  if(e.target.classList&&(e.target.classList.contains('addable')||e.target.classList.contains('vadd'))){
     const row=e.target.closest('.trow'), x=e.clientX-e.target.getBoundingClientRect().left, m=H0*60+Math.floor(x/SLOT)*30;
-    const d=new Date(+row.dataset.day);d.setHours(Math.floor(m/60),m%60,0,0);openTask(null,{staff:+row.dataset.staff,at:d});
+    const d=new Date(+row.dataset.day);d.setHours(Math.floor(m/60),m%60,0,0);
+    if(row.dataset.cls!==undefined){if(d>=d0())openPick({cls:row.dataset.cls||null,at:d})}else openTask(null,{staff:+row.dataset.staff,at:d});
   }
 });
 document.addEventListener('keydown',e=>{
@@ -1638,6 +1770,7 @@ window.addEventListener('pointerup',e=>endDrag(e,false));
 window.addEventListener('pointercancel',e=>endDrag(e,true));
 
 let rsT=0;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(state.view==='cal'&&!drag&&overlay.hidden)render()},150)});
+window.matchMedia('(max-width:860px)').addEventListener('change',()=>{if(state.view==='cal'&&!drag&&overlay.hidden)render()});
 
 /* ===================== 本番：Supabase 接続層 =====================
    画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
