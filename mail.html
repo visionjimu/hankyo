@@ -1,0 +1,1802 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>メール｜Vision</title>
+<meta name="theme-color" content="#0b8563">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
+<style>
+/* 反響帳とカレンダーは別のサイト（1つのソースから APP の値を変えて2つ作る）。メニューの「ほかのアプリ」で行き来する。
+   レイアウト: 左にメニュー、右が作業面。入口は反響一覧（件数の札 → タブ → 絞り込み → 表 → その場で記録）。
+   お客様の画面は進み具合ごとに並びが変わる。カレンダーは横が時間・縦が分類と人。
+   見た目は3案を切り替えて比べるための見本なので、明るい画面専用にしている。 */
+:root{
+  --danger:#b3261b; --danger-soft:#fde7e3; --warn:#8a5300; --warn-soft:#fbeed0; --ok:#1a6f3c; --ok-soft:#dff2e6;
+  --c1:#86b6ef; --c2:#2a78d6; --c3:#104281;
+  /* 見た目A：かろやか（緑・白いメニュー） */
+  --canvas:#f3f5f4; --surface:#ffffff; --surface-2:#f4f6f5; --ink:#0f1a16; --muted:#5a6661; --line:#e6eae8; --line-2:#cfd6d2;
+  --accent:#0b8563; --accent-ink:#ffffff; --accent-soft:#e1f4ec; --accent-text:#0a6e52;
+  --nav-bg:#ffffff; --nav-ink:#0f1a16; --nav-muted:#5a6661; --nav-on-bg:#e1f4ec; --nav-on-ink:#0a6e52; --nav-line:#e6eae8;
+  --r:12px; --r-s:8px; --r-pill:999px;
+  --card-shadow:0 1px 2px rgba(15,26,22,.04),0 1px 3px rgba(15,26,22,.06); --pop-shadow:0 20px 48px rgba(15,26,22,.22);
+  --font:"Figtree","Noto Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif; --row-py:13px; --slot:32px;
+}
+/* 見た目B：きりっと（青・紺のメニュー。濃い色はここだけ） */
+:root[data-look="b"]{
+  --canvas:#eff1f5; --surface:#ffffff; --surface-2:#f3f5f9; --ink:#0f1a33; --muted:#535e79; --line:#e1e5ee; --line-2:#c6cddb;
+  --accent:#2446c9; --accent-ink:#ffffff; --accent-soft:#e6ebfc; --accent-text:#1f3eb5;
+  --nav-bg:#0f1a33; --nav-ink:#eef1f9; --nav-muted:#a9b3cb; --nav-on-bg:#22335c; --nav-on-ink:#ffffff; --nav-line:#22304f;
+  --r:8px; --r-s:6px; --r-pill:6px; --card-shadow:0 1px 2px rgba(15,26,51,.05); --pop-shadow:0 16px 40px rgba(15,26,51,.25);
+  --font:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif; --row-py:10px;
+}
+/* 見た目C：おだやか（深い青緑・生成りのメニュー） */
+:root[data-look="c"]{
+  --canvas:#f4f1ec; --surface:#fffdf9; --surface-2:#f3efe7; --ink:#2b2620; --muted:#6c6459; --line:#e7e1d6; --line-2:#d2cabb;
+  --accent:#1d5c6b; --accent-ink:#ffffff; --accent-soft:#deecef; --accent-text:#1a5361;
+  --nav-bg:#ebe6dc; --nav-ink:#2b2620; --nav-muted:#6c6459; --nav-on-bg:#fffdf9; --nav-on-ink:#1a5361; --nav-line:#d8d1c3;
+  --r:10px; --r-s:6px; --r-pill:999px; --card-shadow:0 1px 2px rgba(43,38,32,.05); --pop-shadow:0 16px 40px rgba(43,38,32,.22);
+  --font:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif; --row-py:12px;
+}
+
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* 骨組み */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.side{background:var(--nav-bg);color:var(--nav-ink);border-right:1px solid var(--nav-line);padding:18px 14px;display:flex;flex-direction:column;gap:16px;position:sticky;top:env(safe-area-inset-top,0px);height:100vh;align-self:start;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 6px 2px}
+.logo{width:32px;height:32px;flex:none;display:block}
+.bname{font-weight:700;font-size:17px;line-height:1;letter-spacing:.12em}
+.bname small{display:block;font-size:11.5px;font-weight:500;color:var(--nav-muted);letter-spacing:.04em}
+.ctx{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--nav-line);border-radius:var(--r-s);font-size:12px;color:var(--nav-muted);line-height:1.45;min-width:0}
+.ctx b{display:block;color:var(--nav-ink);font-size:13.5px;font-weight:700}
+.ctx .av{background:var(--nav-on-bg);color:var(--nav-on-ink)}
+.side .demo-ctl select{background-color:var(--surface)}
+.navlab{font-size:11.5px;color:var(--nav-muted);letter-spacing:.08em;padding:0 10px;margin-bottom:-8px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button,.nav a{display:flex;text-decoration:none;cursor:pointer;align-items:center;gap:11px;border:0;background:none;color:var(--nav-muted);padding:9px 10px;border-radius:var(--r-s);font-weight:500;text-align:left;width:100%;font-size:14px}
+.nav button svg,.nav a svg{flex:none}.nav a .ext{margin-left:auto;opacity:.55}
+.nav button:hover,.nav a:hover{color:var(--nav-ink);background:var(--nav-on-bg)}
+.nav button[aria-current="page"]{background:var(--nav-on-bg);color:var(--nav-on-ink);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
+.count{font-size:12px;min-width:20px;padding:0 6px;border-radius:999px;background:var(--danger);color:#fff;line-height:19px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.nav .count{margin-left:auto}
+.side-foot{margin-top:auto;padding:14px 4px 0;border-top:1px solid var(--nav-line)}
+.demo-ctl{display:flex;flex-direction:column;gap:10px;font-size:12.5px}
+.demo-ctl label{display:flex;flex-direction:column;gap:4px;color:var(--nav-muted)}
+.demo-ctl select{border:1px solid var(--nav-line);background-color:var(--nav-on-bg);color:var(--nav-ink);border-radius:var(--r-s);padding:6px 28px 6px 9px;font-size:13px;max-width:100%}
+.demo-ctl p{color:var(--nav-muted);line-height:1.55}
+.demo-ctl .linkbtn{border:0;background:none;padding:0;color:var(--nav-muted);text-decoration:underline;text-align:left;font-size:12.5px}
+.demo-ctl .btn{justify-content:center;white-space:normal;text-align:center;font-size:13px;padding:7px 10px;background:transparent;border-color:var(--nav-line);color:var(--nav-ink);box-shadow:none}
+.demo-ctl .btn:hover{background:var(--nav-on-bg);border-color:var(--nav-muted)}
+.demo-m{display:none}
+.main{min-width:0;padding-block:26px 56px;padding-inline:clamp(16px,2.6vw,36px)}
+
+/* 部品 */
+.btn{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-s);padding:7px 14px;font-weight:600;font-size:14px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 1px rgba(16,24,40,.04)}
+.btn:hover{border-color:var(--muted);background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.16)}
+.btn.primary:hover{filter:brightness(1.08);background:var(--accent)}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted);box-shadow:none}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.sm{padding:5px 11px;font-size:13.5px}
+.btn.on{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.btn.ico{padding:5px 7px}
+.btn.ico svg{transition:transform .12s}
+.btn.ico[aria-expanded="true"] svg{transform:rotate(180deg)}
+.inp,.sel,.search input{border:1px solid var(--line-2);background-color:var(--surface);border-radius:var(--r-s);min-height:36px}
+.inp{padding:6px 11px;min-width:0;width:100%}
+.sel{padding:6px 10px;max-width:100%}
+select.sel,.demo-ctl select{appearance:none;-webkit-appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a94a0' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.inp:focus,.sel:focus,.search input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.inp::placeholder,.search input::placeholder{color:var(--muted);opacity:.75}
+.chip{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-pill);padding:4px 13px;font-size:13.5px;font-weight:500}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text);font-weight:700;box-shadow:inset 0 0 0 1px var(--accent)}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:2px 9px;border-radius:var(--r-pill);background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;flex:none}
+.pill.danger{background:var(--danger-soft);color:var(--danger)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.accent{background:var(--accent-soft);color:var(--accent-text)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.solid{background:var(--ok);color:#fff}
+.tag{font-size:11.5px;color:var(--muted);border:1px solid var(--line-2);border-radius:5px;padding:0 6px;white-space:nowrap;font-weight:600;flex:none;line-height:1.7;background:var(--surface)}
+.tag.cls{background:var(--accent-soft);border-color:transparent;color:var(--accent-text);font-weight:700}
+.tag.fu{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:700;margin-left:5px;font-variant-numeric:tabular-nums}
+.tag.re{background:var(--warn-soft);border-color:transparent;color:var(--warn);font-weight:700;margin-left:5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--card-shadow)}
+.av{width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;font-size:14px;font-weight:700;flex:none;background:var(--surface-2);color:var(--muted);line-height:1}
+.av.a0{background:#e3edff;color:#1e4fc2} .av.a1{background:#e2f5ec;color:#0a6e52} .av.a2{background:#fdeed6;color:#8a5300}
+.av.a3{background:#f1e7fd;color:#6a2bb5} .av.a4{background:#ffe6e9;color:#b3264a} .av.a5{background:#def3f8;color:#0b6680}
+.av.xs{width:22px;height:22px;font-size:11.5px}
+.av.lg{width:46px;height:46px;font-size:19px}
+.vhead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 20px;margin-bottom:18px}
+.vhead h1{font-size:22px;font-weight:700;line-height:1.3;letter-spacing:.01em;text-wrap:balance}
+.vhead h1 small{font-size:13px;font-weight:600;color:var(--muted);margin-left:10px;padding:2px 9px;border-radius:var(--r-pill);background:var(--surface);border:1px solid var(--line);vertical-align:3px}
+.vhead p{color:var(--muted);font-size:13px;max-width:52em;margin-top:4px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* 反響一覧：件数の札 */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"ic l" "ic n";gap:0 12px;align-items:center;text-align:left;padding:13px 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--card-shadow);min-width:0}
+.kpi:hover{border-color:var(--line-2)}
+.kpi-ic{grid-area:ic;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.kpi-l{grid-area:l;font-size:12.5px;color:var(--muted);font-weight:600}
+.kpi b{grid-area:n;font-size:26px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi b i{font-style:normal;font-size:13px;font-weight:600;margin-left:3px;color:var(--muted)}
+.kpi.danger .kpi-ic{background:var(--danger-soft);color:var(--danger)}
+.kpi.warn .kpi-ic{background:var(--warn-soft);color:var(--warn)}
+.kpi.accent .kpi-ic{background:var(--accent-soft);color:var(--accent-text)}
+.kpi.ok .kpi-ic{background:var(--ok-soft);color:var(--ok)}
+.kpi[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.kpi[aria-pressed="true"] .kpi-l{color:var(--accent-text)}
+
+/* 反響一覧：表 */
+.list{overflow:clip}
+.ltabs{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;padding:0 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.presets{display:flex;gap:4px 22px;align-items:stretch;overflow-x:auto;min-width:0;scrollbar-width:none}
+.presets::-webkit-scrollbar{display:none}
+.preset{border:0;border-bottom:2px solid transparent;background:none;padding:13px 0 11px;font-size:14px;font-weight:500;color:var(--muted);display:inline-flex;gap:7px;align-items:center;white-space:nowrap;flex:none}
+.preset:hover{color:var(--ink)}
+.preset b{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;background:var(--surface-2);border-radius:999px;padding:0 7px;line-height:1.6}
+.preset[aria-pressed="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
+.preset[aria-pressed="true"] b{background:var(--accent-soft);color:var(--accent-text)}
+.lbar{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);padding:8px 0}
+.filters{padding:12px 16px;border-bottom:1px solid var(--line)}
+.frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{position:relative;flex:1 1 240px;min-width:0}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.search input{width:100%;padding:6px 10px 6px 34px}
+.lhead,.lrow{display:grid;grid-template-columns:104px minmax(150px,1.1fr) minmax(170px,1.7fr) 116px minmax(160px,1.5fr) 104px 116px;gap:0 14px;align-items:center;padding:var(--row-py) 16px}
+.lhead{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.03em;border-bottom:1px solid var(--line);padding-block:9px;background:var(--surface-2);position:sticky;top:env(safe-area-inset-top,0px);z-index:4}
+.lrow{border-bottom:1px solid var(--line);cursor:pointer}
+.lrow:hover{background:var(--surface-2)}
+.lrow.open,.lrow.open:hover{background:var(--accent-soft)}
+.lrow small{display:block;font-size:12.5px;color:var(--muted)}
+.lrow > div{min-width:0}
+.c-recv{font-size:13px}
+.c-name{display:flex;align-items:center;gap:10px}
+.c-name > div{min-width:0}
+.c-name small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-name b{font-weight:700;font-size:14.5px;margin-right:6px}
+.c-inq{display:flex;flex-wrap:wrap;gap:3px 6px;align-items:center}
+.ell{flex:1 1 100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:13px;color:var(--muted)}
+.ell.full{flex:1 1 100%;white-space:normal;overflow:visible;overflow-wrap:anywhere;color:var(--ink);line-height:1.45}
+.c-next{font-size:13px;overflow-wrap:anywhere}
+.c-next.danger{color:var(--danger);font-weight:700}
+.c-next.warn{color:var(--warn);font-weight:700}
+.c-next.accent{color:var(--accent-text);font-weight:600}
+.c-own{font-size:13px;display:flex;align-items:center;gap:7px}
+.c-own .sub{color:var(--muted)}
+.c-act{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.lstrip{padding:16px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+.lempty{padding:44px 16px;text-align:center;color:var(--muted)}
+.lrow.hasH{border-bottom:0;padding-bottom:6px}
+.lhist{display:grid;grid-template-columns:78px minmax(0,1fr);gap:3px 12px;padding:2px 16px 14px 178px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.55;cursor:pointer}
+.lrow.hasH:hover + .lhist,.lhist:hover{background:var(--surface-2)}
+.lh-d{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums;padding-top:1px}
+.lh-i{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lh{margin:0;overflow-wrap:anywhere}
+.lh .lh-t{color:var(--muted);font-size:12.5px;margin-right:8px;font-variant-numeric:tabular-nums}
+.lh b{font-weight:700;margin-right:8px;font-size:12.5px;color:var(--muted)}
+.lh.cu b{color:var(--accent-text)}
+.lh.cu{border-left:3px solid var(--accent);padding-left:8px;margin-left:-11px}
+.lh.ng,.lh.sy{color:var(--muted)}
+.lh .lh-w{color:var(--muted);font-size:12.5px;margin-left:8px;white-space:nowrap}
+.lh.long{display:flex;align-items:baseline}
+.lh.long .lh-t,.lh.long b,.lh.long .lh-w{flex:none}
+.lh.long .lh-x{min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lfoot{padding:11px 16px;font-size:12.5px;color:var(--muted)}
+.lrow.flash,.lrow.flash:hover{box-shadow:inset 4px 0 0 var(--accent);background:var(--accent-soft)}
+
+/* 記録の入力 */
+.rec{display:flex;flex-direction:column;gap:11px}
+.rec-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center}
+.rec-l{font-size:12.5px;color:var(--muted);font-weight:600}
+.rec-in{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rec-in .inp{flex:1 1 220px}
+.rec-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:102px}
+.rec-hint{font-size:12.5px;color:var(--muted)}
+.rec.boxed{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--card-shadow)}
+
+/* カレンダー（横が時間） */
+.duebar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.duebar > span{color:var(--muted);margin-right:4px}
+.duechip{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-pill);padding:2px 10px;font-size:13px}
+.duechip:hover{border-color:var(--muted)}
+.tlwrap{overflow-x:auto}
+.tlgrid{min-width:max-content}
+.trow{display:grid;grid-template-columns:132px auto;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.tlab{padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px;border-right:1px solid var(--line);font-weight:700;position:sticky;left:0;background:var(--surface);z-index:3}
+.tlab small{font-weight:400;font-size:12.5px;color:var(--muted)}
+.tlab .linkbtn{border:0;background:none;padding:0;color:var(--accent-text);font-size:12.5px;text-align:left;font-weight:600}
+.tlab .linkbtn:hover{text-decoration:underline}
+.tlab.me{box-shadow:inset 3px 0 0 var(--accent)}
+.daybtn{border:0;background:none;padding:0;text-align:left;font-weight:700}
+.daybtn:hover{text-decoration:underline}
+.tline{position:relative;background:repeating-linear-gradient(to right,var(--line) 0,var(--line) 1px,transparent 1px,transparent calc(var(--slot)*2))}
+.tline.addable{cursor:cell}
+.trow.over .tline{background-color:var(--accent-soft)}
+.tsep{background:var(--surface-2);border-bottom:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}
+.tsep span{display:inline-block;position:sticky;left:0;padding:6px 12px}
+.thead .tlab{background:var(--surface-2)}
+.thead .tline{height:30px;background:var(--surface-2)}
+.thead .tline span{position:absolute;top:6px;padding-left:5px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:2;pointer-events:none}
+.tblk{position:absolute;height:40px;border-radius:7px;font-size:12px;line-height:1.4;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;white-space:nowrap;
+  background:var(--surface);border:1.5px dashed var(--accent);color:var(--ink);z-index:1}
+.tb{position:absolute;left:8px;top:1px;white-space:nowrap;pointer-events:none}
+.tblk b{display:block;font-size:13px;font-weight:700}
+.tblk.conf{background:var(--accent-soft);border:1.5px solid var(--accent)}
+.tblk.done{background:var(--ok-soft);border:1.5px solid transparent;color:var(--ok)}
+.tblk.off{background:var(--surface-2);border:1.5px solid transparent;color:var(--muted);text-decoration:line-through}
+.tblk.task{background:var(--surface-2);border:1.5px solid var(--line-2)}
+.tblk.task .tb{left:30px}
+.tblk.task.fin{opacity:.6;text-decoration:line-through}
+.tblk.moving{z-index:6;box-shadow:var(--pop-shadow);cursor:grabbing;pointer-events:none}
+.tdone{position:absolute;left:5px;top:9px;width:18px;height:18px;border:1.5px solid var(--muted);border-radius:4px;background:var(--surface);padding:0;font-size:12px;line-height:1;color:var(--ok);display:grid;place-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.segbtn{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-s);background:var(--surface-2);border:1px solid var(--line)}
+.segbtn button{border:0;background:none;padding:4px 13px;font-size:13px;font-weight:600;color:var(--muted);border-radius:calc(var(--r-s) - 3px)}
+.segbtn button:hover{color:var(--ink)}
+.segbtn button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.14)}
+
+/* メール（お客様スレッド専用） */
+.mail{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.mlist{overflow:hidden}
+.mfilt{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.mitems{max-height:calc(100vh - 250px);overflow:auto}
+.mitem{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.mitem:hover{background:var(--surface-2)}
+.mitem.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mitem .mi-n{display:flex;align-items:center;gap:6px;min-width:0}
+.mitem .mi-n b{font-size:14.5px;white-space:nowrap}
+.mitem .mi-n small{color:var(--muted);font-size:12px;white-space:nowrap}
+.mitem .sn{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.mitem .mi-r{display:flex;flex-direction:column;align-items:flex-end;gap:5px;font-size:11.5px;color:var(--muted)}
+.mitem .dot{width:9px;height:9px;border-radius:50%;background:var(--danger)}
+.mempty{padding:28px 16px;color:var(--muted);font-size:13.5px;text-align:center}
+.thread{display:flex;flex-direction:column;min-height:calc(100vh - 190px)}
+.thread.noSel{align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+.th-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.th-head .who{display:flex;align-items:center;gap:10px;min-width:0}
+.th-head .who b{font-size:16px}
+.th-head .who small{display:block;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.msgs{padding:18px;display:flex;flex-direction:column;gap:12px;flex:1}
+.msg{max-width:74%;padding:10px 14px;border-radius:14px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.msg.in{background:var(--surface-2);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.out{background:var(--accent-soft);align-self:flex-end;border-bottom-right-radius:4px}
+.msg .mt{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;white-space:nowrap}
+.msg .mt b{color:var(--ink);font-weight:700;margin-right:6px}
+.msg .ms{font-weight:700;margin-bottom:3px}
+.msg.sys{align-self:center;background:none;color:var(--muted);font-size:12.5px;padding:0;max-width:100%}
+.compose{border-top:1px solid var(--line);padding:14px 18px;display:grid;gap:8px;background:var(--surface-2);border-radius:0 0 var(--r) var(--r)}
+.compose .cp2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.compose textarea{min-height:130px;resize:vertical;font:inherit;font-size:14px;line-height:1.6}
+.compose .cpfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.compose .cpfoot .mnote{margin-left:auto}
+.unm{display:grid;gap:10px}
+.unm .card{padding:14px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center}
+.unm .uf{font-size:13px;color:var(--muted)}
+.unm .us{font-weight:700}
+.unm .ub{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unm .ua{display:flex;gap:6px;grid-row:1/4}
+@media (max-width:1080px){.mail{grid-template-columns:300px minmax(0,1fr)}}
+@media (max-width:860px){.mail{grid-template-columns:minmax(0,1fr)}.mail.hasSel .mlist{display:none}.thread{min-height:0}.msg{max-width:88%}.compose .cp2{grid-template-columns:1fr}.mitems{max-height:none}.unm .card{grid-template-columns:1fr}.unm .ua{grid-row:auto}}
+/* Jinjer の打刻・休み、接客できる人 */
+.att{display:block;font-weight:600;font-size:11.5px;line-height:1.3}
+.att.in,.att.out{color:var(--ok)}.att.none{color:var(--warn)}.att.off,.att.leave{color:var(--muted)}.att.plan{color:var(--muted);font-weight:400}
+.trow[data-off] .tline{background-color:var(--surface-2);background-image:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.035) 6px 7px)}
+.trow[data-off] .tlab{color:var(--muted)}
+.frees span{position:absolute;top:5px;height:24px;display:grid;place-items:center;font-size:12px;font-weight:700;border-radius:6px;font-variant-numeric:tabular-nums}
+.frees .ok{background:var(--ok-soft);color:var(--ok)}.frees .warn{background:var(--warn-soft);color:var(--warn)}.frees .bad{background:var(--danger-soft);color:var(--danger)}
+.attsum{font-weight:500;margin-left:8px}
+/* 物件の候補（いえらぶの物件データから） */
+.sugwrap{position:relative}
+.sug{position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-s);box-shadow:var(--pop-shadow);overflow:hidden;margin-top:4px}
+.sugi{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:8px 12px;font-size:14px;font-weight:500;color:var(--ink)}
+.sugi:hover,.sugi:focus{background:var(--accent-soft);outline:0}
+.sugi small{color:var(--muted);font-size:12px;white-space:nowrap;font-weight:400}
+.iel{border:0;background:none;padding:0 4px;color:var(--accent-text);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer}
+.iel:hover{text-decoration:underline}
+.bagent{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.propst{font-size:12.5px;color:var(--muted)}
+.sugi span{flex:none;font-weight:600}.sugi small{flex:1;white-space:normal;text-align:left;line-height:1.4}
+/* ログイン */
+.login{max-width:380px;margin:12vh auto 0;padding:28px 26px;display:grid;gap:12px}
+.login h1{font-size:20px;display:flex;align-items:center;gap:10px}
+.login .err{color:var(--danger);font-size:13px;min-height:1.2em}
+.login label{display:grid;gap:4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.login .inp{font-size:15px;min-height:42px}
+.loading{color:var(--muted);padding:40px;text-align:center}
+/* 数字 */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.tile{padding:16px 18px}
+.tile small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.tile b{font-size:32px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.tile b i{font-style:normal;font-size:14px;font-weight:600;margin-left:3px;color:var(--muted)}
+.tile span{display:block;font-size:12.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+.panel{padding:18px 20px}
+.panel h2{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.chart-rows{display:grid;grid-template-columns:72px minmax(0,1fr);gap:14px 10px;align-items:center}
+.chart-rows .lab{font-size:13px;font-weight:600;text-align:right}
+.bars{display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--line-2)}
+.barline{display:flex;align-items:center;gap:6px;height:11px}
+.bar{height:11px;border-radius:0 4px 4px 0}
+.bar.b1{background:var(--c1)} .bar.b2{background:var(--c2)} .bar.b3{background:var(--c3)}
+.barline em{font-style:normal;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.03em}
+th:first-child,td:first-child{text-align:left}
+td{font-variant-numeric:tabular-nums}
+td:first-child{font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+
+/* お客様の画面 */
+.chead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:16px}
+.chead h1{font-size:22px;font-weight:700;line-height:1.3}
+.chead .kana{color:var(--muted);font-size:12.5px}
+.chead .btn{margin-right:4px}
+.steps{display:flex;align-items:center;margin-bottom:18px;padding:13px 18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--card-shadow);counter-reset:st}
+.steps button{flex:1 1 0;display:flex;align-items:center;gap:9px;border:0;background:none;padding:0;font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap;counter-increment:st;min-width:0}
+.steps button::before{content:counter(st);width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--surface);display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:none;font-variant-numeric:tabular-nums}
+.steps button::after{content:"";flex:1;height:2px;background:var(--line);margin:0 12px 0 4px;border-radius:2px;min-width:8px}
+.steps button:last-child{flex:0 0 auto}
+.steps button:last-child::after{display:none}
+.steps button:hover{color:var(--ink)}
+.steps button.past{color:var(--ink)}
+.steps button.past::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps button.past::after{background:var(--accent)}
+.steps button.cur{color:var(--ink);font-weight:700}
+.steps button.cur::before{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 4px var(--accent-soft)}
+.steps.closed button.past::before,.steps.closed button.cur::before{background:var(--surface-2);border-color:var(--line-2);color:var(--muted);box-shadow:none}
+.steps.closed button.past::after{background:var(--line)}
+.steps.closed button.past,.steps.closed button.cur{color:var(--muted);font-weight:500}
+.steps button.peek{color:var(--ink);font-weight:700}
+.steps button.peek::before{border:1.5px dashed var(--ink);background:var(--surface);color:var(--ink);box-shadow:none}
+.peekbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r-s);padding:10px 14px;margin:-6px 0 16px;font-size:13.5px}
+.peekbar b{font-weight:700}
+.cgrid.peeking{opacity:.8}
+.cgrid{display:grid;grid-template-columns:minmax(0,1fr) 350px;grid-template-areas:"main rest";gap:14px 24px;align-items:start}
+.c-main{grid-area:main;min-width:0;display:flex;flex-direction:column;gap:14px}
+.c-rest{grid-area:rest;display:flex;flex-direction:column;gap:12px}
+.panel.hot{border-color:var(--warn);background:var(--warn-soft)}
+.panel.hot h2{color:var(--warn)}
+.stepn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--surface);font-size:12px;font-weight:700;flex:none;margin-right:9px;font-variant-numeric:tabular-nums}
+.panel h2.st,.rec-h{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:4px 0;font-size:15px;font-weight:700;letter-spacing:0;color:var(--ink);margin-bottom:12px}
+.panel h2.st .pill{margin-left:10px;white-space:normal}
+.rec-h{margin-bottom:2px}
+.quote{border-left:3px solid var(--line-2);padding:1px 0 1px 12px;font-size:15px;overflow-wrap:anywhere}
+.panel.hot .quote{border-left-color:var(--warn)}
+.quote small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+.telbig{font-size:18px;font-weight:700}
+.hist-h{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--muted);margin-top:12px}
+.lhist.flat{padding:0;border:0;cursor:default;font-size:13.5px}
+.lhist.flat:hover{background:none}
+.lhist.flat .lh.long .lh-x{display:block}
+.sumline{font-size:12.5px;color:var(--muted);margin-bottom:12px;padding:8px 11px;border-radius:var(--r-s);background:var(--surface-2)}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 22px}
+.fgrid .field{grid-template-columns:96px minmax(0,1fr)}
+.fgrid .wide{grid-column:1/-1}
+.ftotal{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-top:12px;padding:12px 14px;border-radius:var(--r-s);background:var(--accent-soft);font-size:13.5px}
+.ftotal b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent-text)}
+.ftotal small{color:var(--muted);font-size:12.5px}
+textarea.inp{min-height:76px;resize:vertical;line-height:1.6;font:inherit;padding-top:8px}
+.vnote{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px}
+.prevrec{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.prevrec b{font-weight:700;margin-right:8px}
+.prevrec .sub{color:var(--muted)}
+.nextline{font-size:17px;font-weight:700;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.rowwrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.field{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:center;padding:4px 0;font-size:13.5px}
+.field label,.field .fl{color:var(--muted);font-size:12.5px;font-weight:600}
+.field .val{overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
+.field .inp,.field .sel{padding:5px 9px;width:100%;min-height:34px}
+.field select.sel{padding-right:28px}
+.field.ie{align-items:start;border-top:1px solid var(--line);margin-top:8px;padding-top:12px}
+.copy{border:0;background:none;color:var(--accent-text);font-size:12.5px;font-weight:600;padding:0 4px;text-decoration:underline}
+.hist{display:flex;flex-direction:column;gap:10px}
+.hist-day{align-self:center;font-size:12px;color:var(--muted);font-weight:700;margin-top:6px;padding:1px 10px;border-radius:999px;background:var(--surface-2)}
+.bub{max-width:min(78%,560px);padding:9px 13px;border-radius:12px;font-size:13.5px;overflow-wrap:anywhere}
+.bub .meta{display:block;font-size:12px;color:var(--muted);margin-bottom:1px}
+.bub.in{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px;box-shadow:var(--card-shadow)}
+.bub.out{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:4px}
+.bub.out .meta{color:var(--accent-text)}
+.bub.ng{background:var(--surface-2)} .bub.ng .meta{color:var(--muted)}
+.bub.memo{background:var(--warn-soft)} .bub.memo .meta{color:var(--warn)}
+.sysline{align-self:center;font-size:12.5px;color:var(--muted);text-align:center;max-width:90%}
+.other{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;background:none;padding:6px 0;text-align:left;font-size:13.5px}
+.other:hover{text-decoration:underline}
+.none-line{color:var(--muted);font-size:12.5px;padding:4px 0}
+
+/* 小窓・通知 */
+.overlay{position:fixed;inset:0;background:rgba(10,14,20,.48);backdrop-filter:blur(2px);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{background:var(--surface);border-radius:calc(var(--r) + 2px);box-shadow:var(--pop-shadow);padding:22px;width:min(480px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sheet.wide{width:min(600px,100%)}
+.sheet.xwide{width:min(940px,100%)}
+.sheet h2{font-size:17px;font-weight:700;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sheet .f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sheet .f .inp,.sheet .f .sel{font-weight:400;color:var(--ink);font-size:14px}
+.sheet .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sheet .f3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.sheet .f4{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:10px}
+.sheet textarea.inp{min-height:190px;resize:vertical;line-height:1.6}
+#cp-b{min-height:230px}
+.sheet .note{font-size:13px;border-radius:var(--r-s);padding:8px 10px;background:var(--warn-soft);color:var(--warn)}
+.sheet-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:2px;padding-top:14px;border-top:1px solid var(--line)}
+.sheet-foot .left{margin-right:auto}
+.mailtabs{display:flex;flex-wrap:wrap;gap:6px}
+.mailgrid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:14px;align-items:start}
+.mailgrid h3{font-size:13px;font-weight:700;display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.mailgrid h3 small{font-size:12px;font-weight:400;color:var(--muted)}
+.mailbox{border:1px solid var(--line-2);border-radius:var(--r-s);background:var(--surface-2);padding:12px 14px;min-width:0}
+.mhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:13px;margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line-2)}
+.mhead dt{color:var(--muted)}
+.mhead dd{margin:0;overflow-wrap:anywhere}
+.mbody{margin:0;font:inherit;font-size:13.5px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.mailarrow{align-self:center;font-size:22px;line-height:1;color:var(--accent);font-weight:700}
+.mailout{min-width:0}
+.mrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:0 10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.mrow:last-child{border-bottom:0}
+.mrow .ml{color:var(--muted);font-size:12.5px;font-weight:600}
+.mrow b{font-weight:700;overflow-wrap:anywhere}
+.mrow small{grid-column:2;font-size:12.5px;color:var(--accent-text)}
+.mnote{font-size:12.5px;color:var(--muted)}
+.slots{display:grid;grid-template-columns:70px repeat(13,minmax(0,1fr));gap:2px;font-size:11.5px}
+.slots .h{color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.slots .d{color:var(--ink);font-size:12.5px;display:flex;align-items:center}
+.slots button{border:0;height:24px;border-radius:4px;background:var(--surface-2);font-size:12px;padding:0;color:var(--ink);font-variant-numeric:tabular-nums}
+.slots button.n1{background:var(--accent-soft)}
+.slots button.n2{background:var(--accent);color:var(--accent-ink)}
+.slots button.sel{outline:2px solid var(--ink);outline-offset:1px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);z-index:70;background:var(--ink);color:var(--surface);border-radius:10px;padding:11px 16px;display:flex;gap:14px;align-items:center;box-shadow:var(--pop-shadow);max-width:calc(100% - 32px);font-size:13.5px;font-weight:500}
+.toast button{border:0;background:none;color:inherit;text-decoration:underline;font-weight:700;white-space:nowrap;padding:0}
+.tip{position:fixed;z-index:80;background:var(--ink);color:var(--surface);font-size:12.5px;padding:5px 9px;border-radius:6px;pointer-events:none;white-space:nowrap}
+
+@media (max-width:1080px){
+  .two{grid-template-columns:minmax(0,1fr)}
+  .cgrid{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "rest"}
+  .tiles,.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:1180px){
+  .lhead{display:none}
+  .lrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name st" "inq inq" "next next" "recv act";gap:5px 10px}
+  .c-recv{grid-area:recv;font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .c-recv small{display:inline}
+  .c-name{grid-area:name} .c-inq{grid-area:inq} .c-st{grid-area:st;justify-self:end} .c-next{grid-area:next} .c-act{grid-area:act;justify-self:end}
+  .c-own{display:none}
+  .lhist{padding-left:16px;grid-template-columns:64px minmax(0,1fr)}
+  .lhist.flat{padding-left:0}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-right:0;border-bottom:1px solid var(--nav-line);overflow:visible}
+  .ctx{border:0;padding:0;text-align:right}
+  .ctx .av,.navlab,.bname small{display:none}
+  .side-foot{display:none}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:25;flex-direction:row;align-items:stretch}.nav .navlab{display:none}.nav a .ext{display:none}.nav{background:var(--nav-bg);border-top:1px solid var(--nav-line);padding:0 0 env(safe-area-inset-bottom,0px)}
+  .nav button,.nav a{flex:1;flex-direction:column;gap:2px;font-size:11.5px;align-items:center;justify-content:center;padding:8px 2px 7px;border-radius:0;position:relative}
+  .nav button[aria-current="page"]{box-shadow:inset 0 3px 0 var(--accent)}
+  .nav .count{position:absolute;top:4px;left:calc(50% + 8px);margin:0}
+  .main{padding-bottom:104px}
+  .demo-m{display:block;margin-top:32px;padding:14px 16px}
+  .demo-m .demo-ctl label,.demo-m .demo-ctl p,.demo-m .demo-ctl .linkbtn{color:var(--muted)}
+  .demo-m .demo-ctl select{background-color:var(--surface);border-color:var(--line-2);color:var(--ink)}
+  .demo-m .demo-ctl .btn{background:var(--surface);border-color:var(--line-2);color:var(--ink)}
+  .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 72px)}
+  .kpi{padding:11px 12px;gap:0 10px}
+  .kpi-ic{width:32px;height:32px;border-radius:8px}
+  .kpi b{font-size:22px}
+  .steps{padding:12px 8px}
+  .steps button{flex-direction:column;gap:4px;font-size:11px;flex:1 1 0}
+  .steps button:last-child{flex:1 1 0}
+  .steps button::after{display:none}
+  .rec-row{grid-template-columns:minmax(0,1fr);gap:4px}
+  .rec-foot{padding-left:0}
+  .bub{max-width:90%}
+  .sheet .f3,.sheet .f4{grid-template-columns:1fr 1fr}
+  .fgrid{grid-template-columns:minmax(0,1fr)}
+  .mailgrid{grid-template-columns:minmax(0,1fr)}
+  .mailarrow{justify-self:center;transform:rotate(90deg)}
+}
+@media (prefers-reduced-motion:no-preference){ .btn,.chip,.preset,.nav button,.kpi,.segbtn button,.lrow{transition:background-color .12s,border-color .12s,box-shadow .12s,color .12s} }
+</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg class="logo" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="var(--accent)"/><circle cx="10.2" cy="16" r="2.9" fill="#fff"/><path d="M15.6 10.4a8 8 0 0 1 0 11.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M20.6 6.6a13.4 13.4 0 0 1 0 18.8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/></svg><span class="bname">反響帳</span></div>
+    <div class="ctx" id="ctx"></div>
+    <nav class="nav" id="nav" aria-label="画面の切り替え"></nav>
+    <div class="side-foot"><div class="demo-ctl"></div></div>
+  </aside>
+  <main class="main">
+    <div id="view"></div>
+    <div class="card demo-m"><div class="demo-ctl"></div></div>
+  </main>
+</div>
+<div class="overlay" id="overlay" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+'use strict';
+const DAY=864e5, MIN=6e4, WD='日月火水木金土';
+let SHOPS=[];
+let STAFF=[];
+const MEDIA=['SUUMO',"HOME'S",'自社HP','電話','紹介'];
+const STAGES=['未対応','追客中','来店予約','来店済','申込','成約'];
+const CLS=['TEL','MT','MM','NF','紹介'];   /* 反響分類。旧システムと同じ5つ */
+const KIND={tel_ok:'電話・つながった',tel_ng:'電話・不通',mail:'メール送信',sms:'SMS・LINE送信',memo:'メモ'};
+const CONTACT=['tel_ok','tel_ng','mail','sms'];
+/* 追メ。日数では決めず、押した回数で 1回目=追1、2回目=追2、3回目=追3 と記録する */
+const FOLLOW=[{label:'追1'},{label:'追2'},{label:'追3'}];
+let MEROW=null, authUser=null;
+const roleInfo=()=>!MEROW?{label:'',sub:''}:MEROW.role==='hq'?{label:'本部',sub:'全店舗'}:{label:shopName(MEROW.shop_id)+(MEROW.is_shared?'':'・'+MEROW.name),sub:MEROW.is_shared?'共用ID':'個人ID'};
+const LOOKS={a:'A　かろやか',b:'B　きりっと',c:'C　おだやか'};
+const H0=8, H1=21, LH=46;
+let SLOT=34;
+const IC={
+  list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  cal:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  nums:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  inbox:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.5A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.5z"/></svg>',
+  bell:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>',
+  mail:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+  visit:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>',
+  chev:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  mailN:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  mailS:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
+  pen:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  back:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  plus:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+};
+
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const p2=n=>String(n).padStart(2,'0');
+const d0=(d=new Date())=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const at=(off,h,m=0)=>{const x=addD(d0(),off);x.setHours(h,m,0,0);return x};
+const ago=min=>new Date(Date.now()-min*MIN);
+const mAgo=d=>(Date.now()-d.getTime())/MIN;
+const fmtT=d=>d.getHours()+':'+p2(d.getMinutes());
+const fmtD=d=>(d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')';
+const dayDiff=d=>Math.round((d0(d)-d0())/DAY);
+const fmtDay=d=>{const n=dayDiff(d);return n===0?'今日':n===1?'明日':n===-1?'昨日':fmtD(d)};
+const elapsed=ms=>{const m=Math.max(0,Math.floor(ms/MIN));if(m<60)return m+'分';const h=Math.floor(m/60);if(h<24)return h+'時間'+(m%60?(m%60)+'分':'');return Math.floor(h/24)+'日'};
+const norm=s=>String(s||'').toLowerCase().replace(/[\s\-‐ー　()（）]/g,'');
+const iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const ymd=s=>{const [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d)};
+const sname=id=>(STAFF.find(s=>s.id===id)||{}).name||'未定';
+const shopName=id=>(SHOPS.find(s=>s.id===id)||{}).name||'';
+const staffOf=s=>STAFF.filter(x=>x.shop===s);
+/* 分類の自動判定：電話で受けた→TEL、紹介→紹介、ネット反響は電話番号があればMT・なければMM。NFだけは手で選ぶ */
+const autoCls=(media,tel)=>media==='電話'?'TEL':media==='紹介'?'紹介':String(tel||'').replace(/\D/g,'').length>=10?'MT':'MM';
+
+/* 機能ごとに別サイト。APP はビルド時に 'hankyo' か 'cal' に差し替える。DBとログインは共通という前提 */
+/* 見本は1ページの中で #cal / #mail に切り替える（本番は別のURL）。別ファイル cal.html / mail.html で開いたときも同じ */
+const appFromLoc=()=>/cal\.html$/.test(location.pathname)||location.hash==='#cal'?'cal':/mail\.html$/.test(location.pathname)||location.hash==='#mail'?'mail':'hankyo';
+let APP=appFromLoc();
+const APPS={hankyo:{name:'反響帳',url:'./',views:['list','nums'],ic:'list'},cal:{name:'カレンダー',url:'cal.html',views:['cal'],ic:'cal'},mail:{name:'メール',url:'mail.html',views:['mail'],ic:'mailN'}};
+let HOME=APPS[APP].views[0];
+let DB=[], TASKS=[], uid=0, tid=0, mailN={mt:0,mm:0}, mailTab='mt';
+/* Jinjer の打刻（見本は固定値。本番は Jinjer API から取り、カレンダーを開いたときに最新を読む） */
+const ATT_AT='10:10';
+const ATT={1:{s:'in',t:'9:58'},2:{s:'off',l:'公休'},3:{s:'in',t:'10:03'},4:{s:'none'},5:{s:'in',t:'9:51'},6:{s:'leave',l:'有休'}};
+const LEAVE=[{staff:3,off:1,l:'公休'},{staff:1,off:2,l:'有休'},{staff:5,off:1,l:'公休'},{staff:2,off:-1,l:'公休'}];
+const JINJER_ON=false;
+const attOf=(id,day)=>{if(!JINJER_ON)return {s:'plan'};const n=dayDiff(day);if(n===0)return ATT[id]||{s:'none'};const lv=LEAVE.find(x=>x.staff===id&&x.off===n);return lv?{s:'off',l:lv.l}:{s:'plan'}};
+const attLabel=a=>a.s==='in'?'出勤 '+a.t:a.s==='out'?'退勤 '+a.t:a.s==='off'||a.s==='leave'?'休み・'+a.l:a.s==='none'?'未打刻':'';
+const isOff=a=>a.s==='off'||a.s==='leave';
+const present=(id,day)=>{const a=attOf(id,day);return a.s==='in'||a.s==='plan'};
+/* 物件の候補：いえらぶに登録した物件を定期的に写しておき、入力の候補と「いえらぶで開く」に使う（見本は架空） */
+/* いえらぶの物件CSV（手動エクスポート）を取り込むと、架空の候補の代わりにそちらを使う。保存はこのブラウザの中だけ */
+let PROPS=null, PROPS_AT=null;
+try{const j=localStorage.getItem('hk3-props');if(j){const o=JSON.parse(j);PROPS=o.rows;PROPS_AT=new Date(o.at)}}catch(e){}
+const BLD0=[{n:'リバーサイド赤羽',st:'赤羽',w:6},{n:'メゾン赤羽西',st:'赤羽',w:9},{n:'サンライズ赤羽',st:'赤羽',w:4},{n:'アーバン赤羽南',st:'赤羽',w:7},{n:'コーポ志茂',st:'志茂',w:5},{n:'ルミエール志茂',st:'志茂',w:3},{n:'グランコート東十条',st:'東十条',w:5},{n:'コンフォート十条',st:'十条',w:8},{n:'パークハイム王子',st:'王子',w:6},{n:'アーバン入谷',st:'入谷',w:4},{n:'グレース上野',st:'上野',w:9},{n:'ブランシェ稲荷町',st:'稲荷町',w:3}];
+const BLDS=()=>PROPS||[];
+const bldOf=p=>{const n=String(p||'').trim();if(!n)return null;const L=BLDS().filter(b=>n.startsWith(b.n));if(!L.length)return null;const m=/^\S+\s+(\S+?)(（|$)/.exec(n);return (m&&L.find(b=>b.room===m[1]))||L[0]};
+const bldSug=k=>{k=norm(k);return k?BLDS().filter(b=>norm(b.n).includes(k)||norm(b.st).includes(k)||(b.code&&norm(b.code).includes(k))||(b.id&&b.id.includes(k))).slice(0,8):[]};
+const ieLink=p=>{const b=bldOf(p);return b?`<button type="button" class="iel" data-act="ie-prop" data-n="${esc(b.n)}" data-id="${esc(b.id||'')}" title="いえらぶの物件ページを開く">いえらぶで開く ↗</button>`:''};
+const bldInfo=p=>{const b=bldOf(p);return b&&b.agent?`<small class="bagent">取扱：${esc(b.agent)}${b.tel?'　<span class="num">'+esc(b.tel)+'</span>':''}${b.code?'　管理コード '+esc(b.code):''}</small>`:''};
+const sugLabel=b=>b.id?`${b.room?b.room+'　':''}${b.st?b.st+'駅 徒歩'+b.w+'分　':''}${b.layout||''}${b.rent?'・'+b.rent+'万円':''}${b.agent?'　'+b.agent:''}`:`${b.st}駅 徒歩${b.w}分・いえらぶ`;
+const sugValue=b=>b.id?`${b.n}${b.room?' '+b.room:''}${b.layout||b.rent?'（'+[b.layout,b.rent?b.rent+'万円':''].filter(Boolean).join('・')+'）':''}`:b.n+' ';
+/* CSV の読み取り：Shift_JIS、Excel 向けの ="..." 形式に対応 */
+function parseCSV(t){const R=[];let r=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){r.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;r.push(f);R.push(r);r=[];f=''}else if(c==='='&&f===''&&t[i+1]==='"'){}else f+=c}if(f!==''||r.length){r.push(f);R.push(r)}return R.filter(x=>x.some(v=>v.trim()))}
+function importProps(buf){
+  let t;try{t=new TextDecoder('shift_jis').decode(buf)}catch(e){t=''} if(!t||(t.match(/\uFFFD/g)||[]).length>5)t=new TextDecoder('utf-8').decode(buf);
+  const R=parseCSV(t); if(R.length<2)return {err:'行がありません'}; const H=R[0].map(x=>x.trim()), ix=n=>H.findIndex(h=>h===n||h.startsWith(n));
+  const I={id:ix('物件番号'),code:ix('管理コード'),n:ix('物件名'),room:ix('空き物件内容'),layout:ix('間取り'),rent:ix('賃料'),tr:ix('交通1'),agent:ix('取扱業者'),tel:ix('電話番号'),area:ix('平米数'),fee:ix('管理費')};
+  if(I.n<0)return {err:'「物件名」の列が見つかりません'};
+  const yen=v=>{const m=/(\d+)万/.exec(v||''),k=/(\d+)円/.exec((v||'').replace(/^\d+万/,''));const y=(m?+m[1]*10000:0)+(k?+k[1]:0);return y?Math.round(y/1000)/10:''};
+  const seen=new Set(), rows=[];
+  R.slice(1).forEach(r=>{const g=i=>i>=0?(r[i]||'').trim():'';const n=g(I.n).replace(/\((公開|非公開)\)\s*$/,'').trim();if(!n)return;
+    const id=g(I.id), key=id||n+g(I.room); if(seen.has(key))return; seen.add(key);
+    const tm=/「(.+?)」駅\s*徒歩\s*(\d+)\s*分/.exec(g(I.tr));
+    rows.push({id,code:g(I.code),n,room:g(I.room).replace(/\((公開|非公開)\)\s*$/,'').trim(),layout:g(I.layout),rent:yen(g(I.rent)),st:tm?tm[1]:'',w:tm?+tm[2]:0,agent:g(I.agent).replace(/\s+$/,''),tel:g(I.tel)==='-'?'':g(I.tel)})});
+  PROPS=rows; PROPS_AT=new Date(); try{localStorage.setItem('hk3-props',JSON.stringify({at:PROPS_AT,rows}))}catch(e){}
+  return {n:rows.length};
+}
+const sugWrap=inp=>`<div class="sugwrap">${inp}<div class="sug" hidden></div></div>`;
+const F0=()=>({q:'',shop:'',period:'all',from:'',to:'',media:'',cls:'',owner:'',preset:'all',att:false,fu:false,sort:'new'});
+const hOpen=new Set();
+const state={role:'hq',look:'a',view:HOME,back:HOME,mailId:null,mf:'all',mq:'',mdraft:null,custId:null,f:F0(),rec:null,recForm:null,calMode:'day',calDay:d0(),calShop:1,undo:null};
+try{const l=localStorage.getItem('hk3-look');if(LOOKS[l])state.look=l;state.hist=localStorage.getItem('hk3-hist')==='1'}catch(e){}
+const ME=()=>MEROW&&MEROW.role!=='hq'&&!MEROW.is_shared?MEROW.id:null;
+const myShop=()=>MEROW&&MEROW.role!=='hq'?MEROW.shop_id:null;
+const scopeShop=()=>myShop()??(state.f.shop?+state.f.shop:null);
+const scope=()=>{const s=scopeShop();return DB.filter(q=>s==null||q.shop===s)};
+const calShop=()=>myShop()??state.calShop;
+
+/* ---------- 見本データ（すべて架空） ---------- */
+function seed(){
+  uid=0; tid=0; const L=[];
+  const V=(off,h,m,dur=60,confirmed=false,result=null,staff=null)=>({at:at(off,h,m),dur,confirmed,result,staff});
+  /* by＝反響に連絡した人。担当(owner)は来店後に決まるので、来店前は空 */
+  const add=(shop,name,kana,media,minAgo,stage,by,o={})=>{
+    const rec=ago(minAgo); const id=++uid;
+    const q={id,shop,name,kana,media,received:rec,stage,owner:o.owner??null,closed:o.closed||null,
+      cls:null,
+      tel:o.tel??('090-0000-'+p2(id)+p2(id+11)),email:o.email??('user'+id+'@example.com'),
+      property:o.prop||'',msg:o.msg||'',wish:Object.assign({area:'',rent:'',layout:'',movein:''},o.wish),
+      due:o.due??null,dueWhat:o.what||'',amount:o.amount??null,visit:o.visit||null,visited:!!o.visited||stage>=3,ck:o.ck||null,ie:o.ie??(media!=='電話'&&media!=='紹介'),vis:o.vis||null,app:o.app||null,pv:o.pv||[],acts:[]};
+    q.cls=o.cls??autoCls(media,q.tel);
+    if(q.visit&&q.visit.result==='来店')q.visit.staff=q.owner;
+    q.acts.push({t:rec,k:'in',text:q.msg});
+    if(o.first!=null) q.acts.push({t:new Date(rec.getTime()+o.first*MIN),k:o.fk||'tel_ok',who:by,text:o.ft||''});
+    (o.more||[]).forEach(([m,k,text,who,fu])=>q.acts.push({t:ago(m),k,who:who??by,text,fu}));
+    const p0=q.pv[0]; q.pv.forEach(p=>{p.staff=p.staff||q.owner});
+    if(p0) q.acts.push({t:new Date(rec.getTime()+((o.first||0)+3)*MIN),k:'sys',text:'来店予約 '+fmtD(p0.at)+' '+fmtT(p0.at)});
+    if(q.visit) q.acts.push({t:p0?new Date(p0.at.getTime()+(p0.dur+10)*MIN):new Date(rec.getTime()+((o.first||0)+3)*MIN),k:'sys',text:(q.visit.again?'再来の予約 ':'来店予約 ')+fmtD(q.visit.at)+' '+fmtT(q.visit.at)});
+    if(q.owner) q.acts.push({t:p0?new Date(p0.at.getTime()+p0.dur*MIN):q.visit&&q.visit.result?new Date(q.visit.at.getTime()+q.visit.dur*MIN):new Date(rec.getTime()+DAY),k:'sys',text:'来店（接客 '+sname(q.owner)+'。担当に決定）'});
+    if(q.closed) q.acts.push({t:new Date(rec.getTime()+2*DAY),k:'sys',text:'終了（'+q.closed+'）'});
+    q.acts.sort((a,b)=>a.t-b.t); L.push(q);
+  };
+  add(1,'相馬 千尋','ソウマ チヒロ','SUUMO',12,0,null,{prop:'リバーサイド赤羽 302（1K・7.2万円）',msg:'この物件を内見したいです。今週末は可能でしょうか。',wish:{area:'赤羽',rent:'7.5',layout:'1K',movein:'11月中'}});
+  add(1,'氷室 拓海','ヒムロ タクミ',"HOME'S",95,0,null,{tel:'',prop:'コーポ志茂 105（1DK・6.8万円）',msg:'初期費用の概算を教えてください。平日は夜しか連絡が取れません。'});
+  add(1,'日下部 澪','クサカベ ミオ','自社HP',mAgo(at(-1,19,40)),0,null,{msg:'赤羽駅から徒歩10分以内、2LDK、12万円までで探しています。来月中に引っ越したいです。',wish:{area:'赤羽駅 徒歩10分以内',rent:'12',layout:'2LDK',movein:'来月中'}});
+  add(1,'椎名 蒼','シイナ アオ','SUUMO',2*1440+200,1,1,{prop:'メゾン赤羽西 201（1LDK・9.8万円）',msg:'内見を希望します。土日が都合がよいです。',first:18,ft:'土曜に来店したいとのこと。時間は折り返しをもらう。',due:d0(),what:'来店時間の確認',wish:{area:'赤羽西',rent:'10',layout:'1LDK',movein:'12月上旬'}});
+  add(1,'榎本 紗希','エノモト サキ',"HOME'S",4*1440+300,1,2,{prop:'パークハイム王子 403（1K・7.0万円）',msg:'まだ空いていますか。',first:42,fk:'tel_ng',more:[[3*1440,'tel_ng','',3],[3*1440-20,'mail','空室状況と内見できる日を返信',3],[2*1440-60,'mail','追メ（追1）',2,1]],due:addD(d0(),-1),what:'返信がなければ電話'});
+  add(1,'宇佐美 直','ウサミ ナオ','自社HP',9*1440,1,3,{msg:'ペット可の物件を探しています。',first:65,ft:'猫1匹。条件を聞いて3件送る約束。',more:[[7*1440-30,'mail','追メ（追1）',3,1],[6*1440,'mail','ペット可の3件を送付',1],[5*1440-30,'mail','追メ（追2）',1,2]],wish:{area:'赤羽・十条',rent:'9',layout:'1LDK',movein:'年内'}});
+  add(1,'鷲尾 健','ワシオ ケン','SUUMO',3*1440,1,1,{prop:'グランコート東十条 506（2DK・10.5万円）',msg:'内見したいです。',first:25,ft:'仕事の都合で来週以降に来店希望。',due:addD(d0(),2),what:'来店日の相談'});
+  add(1,'有馬 朋美','アリマ トモミ','電話',1440+120,1,4,{email:'',msg:'電話で問い合わせ。駅に近い1Kを希望。',first:0,ft:'希望条件を聞き取り。資料を用意して折り返す。',due:d0(),what:'候補の物件を伝える',wish:{area:'赤羽駅 徒歩5分以内',rent:'8',layout:'1K',movein:'急ぎ'}});
+  add(1,'高梨 遥','タカナシ ハルカ','SUUMO',5*1440,1,2,{ck:'tk',tel:'090-0000-7788',prop:'サンライズ赤羽 204（1LDK・8.9万円）',msg:'以前も問い合わせました。年内に入居したいです。',first:30,ft:'前回は時期が合わず見送り。今回は年内入居で検討。',more:[[3*1440-40,'mail','追メ（追1）',2,1]],due:addD(d0(),-3),what:'内見の候補を送る'});
+  add(1,'高梨 遥','タカナシ ハルカ',"HOME'S",40*1440,1,2,{ck:'tk',tel:'090-0000-7788',msg:'資料を送ってください。',first:50,closed:'見込みなし'});
+  add(1,'柏木 陸','カシワギ リク','SUUMO',3*1440+60,2,1,{prop:'アーバン赤羽南 701（1LDK・11.0万円）',msg:'内見希望です。',first:15,ft:'来店日を決定。',visit:V(0,13,30,60,true)});
+  add(1,'真壁 詩織','マカベ シオリ','自社HP',2*1440+500,2,2,{msg:'2人入居できる物件を見たいです。',first:33,visit:V(0,16,0,60,false),wish:{area:'赤羽',rent:'11',layout:'1LDK〜2DK',movein:'1月'}});
+  add(1,'蓮見 彩','ハスミ アヤ',"HOME'S",4*1440,2,4,{prop:'ルミエール志茂 302（1K・6.5万円）',msg:'内見できますか。',first:20,visit:V(-1,17,0,60,true)});
+  add(1,'砂川 悠','スナガワ ユウ','紹介',2*1440,2,4,{msg:'ご紹介。転勤で家族向けの物件を希望。',first:10,visit:V(1,11,0,90,false),wish:{area:'北区全域',rent:'15',layout:'3LDK',movein:'3月'}});
+  add(1,'鳴海 結','ナルミ ユイ','SUUMO',1440+300,2,1,{prop:'コンフォート十条 102（1K・6.9万円）',msg:'内見希望です。',first:28,visit:V(2,15,0,60,false)});
+  add(1,'八代 智也','ヤシロ トモヤ','SUUMO',6*1440,3,2,{owner:3,prop:'メゾン赤羽西 305（1LDK・9.5万円）',msg:'内見希望です。',first:22,visit:V(-2,14,0,60,true,'来店'),due:d0(),what:'申込の意思確認',amount:9,vis:{props:'メゾン赤羽西 305、グランコート東十条 402',result:'検討中',note:'305が第一希望。初期費用の概算を渡した。\n家族に相談して、週明けに返事をもらう約束。'},wish:{area:'赤羽西',rent:'10',layout:'1LDK',movein:'11月下旬'}});
+  add(1,'緒方 楓','オガタ カエデ',"HOME'S",8*1440,3,3,{owner:3,msg:'駐車場つきを探しています。',first:55,pv:[V(-4,11,0,60,true,'来店')],visit:Object.assign(V(1,13,0,60,false),{again:true}),amount:12,vis:{props:'駐車場つきの2件',result:'再来',note:'駐車場つきは予算を少し超える。\n条件をゆるめた候補が見つかり、もう一度来店してもらうことになった。'},wish:{area:'赤羽・川口',rent:'12',layout:'2LDK',movein:'年内'}});
+  add(1,'早乙女 蓮','サオトメ レン','自社HP',10*1440,4,1,{owner:1,prop:'グランコート東十条 402（2DK・10.8万円）',msg:'申込を進めたいです。',first:12,amount:11,due:addD(d0(),3),what:'審査結果の連絡',app:{bld:'グランコート東十条',room:'402',rent:108000,fee:5000,applied:iso(addD(d0(),-2)),movein:iso(addD(d0(),21)),contract:iso(addD(d0(),9)),comm:110000,ad:'',screen:'審査中'},vis:{props:'グランコート東十条 402',result:'申込',note:'内見してその場で申込を決めた。'}});
+  add(1,'城戸 美月','キド ミヅキ','電話',9*1440,4,4,{owner:2,email:'',msg:'電話で問い合わせ。',first:0,amount:8,due:d0(),what:'必要書類の回収'});
+  add(1,'三枝 大和','サエグサ ヤマト','SUUMO',14*1440,5,1,{owner:1,first:20,amount:10,msg:'内見希望です。'});
+  add(1,'都築 奈緒','ツヅキ ナオ','紹介',12*1440,5,2,{owner:2,first:8,amount:13,msg:'ご紹介。'});
+  add(1,'風間 翔','カザマ ショウ',"HOME'S",16*1440,5,3,{owner:4,first:70,amount:7,msg:'空室確認。'});
+  add(1,'設楽 莉子','シタラ リコ','SUUMO',7*1440,1,1,{first:45,closed:'他決',msg:'内見希望です。'});
+  add(1,'羽鳥 匠','ハトリ タクミ',"HOME'S",11*1440,1,3,{first:180,fk:'tel_ng',closed:'見込みなし',msg:'資料請求。'});
+  add(1,'桐生 真央','キリュウ マオ','SUUMO',13*1440,3,2,{owner:2,first:26,closed:'他決',visited:true,msg:'内見希望です。'});
+  add(2,'日比野 航','ヒビノ ワタル','SUUMO',40,0,null,{prop:'アーバン入谷 501（1LDK・9.2万円）',msg:'この部屋を見学したいです。入居は12月の予定です。'});
+  add(2,'有栖川 結衣','アリスガワ ユイ','電話',1440+90,1,5,{email:'',msg:'電話で問い合わせ。1Kで駅徒歩10分以内。',first:0,ft:'来週の平日に内見したい。',due:addD(d0(),1),what:'内見の候補を伝える',wish:{area:'稲荷町',rent:'8',layout:'1K',movein:''}});
+  add(2,'一色 剛','イッシキ ゴウ',"HOME'S",3*1440,2,6,{prop:'グレース上野 204（1DK・8.4万円）',msg:'内見希望です。',first:35,visit:V(0,15,0,60,true)});
+  add(2,'朝比奈 透子','アサヒナ トウコ','自社HP',5*1440,3,5,{owner:5,msg:'2DKを探しています。',first:20,visit:V(-1,13,0,60,true,'来店'),due:d0(),what:'お礼と感触の確認',amount:10});
+  add(2,'鵜飼 慎','ウカイ シン','SUUMO',8*1440,5,6,{owner:6,first:15,amount:9,msg:'内見希望です。'});
+  add(2,'霧島 環','キリシマ タマキ','SUUMO',6*1440,1,5,{first:60,closed:'他決',msg:'空室確認。'});
+  const T=(shop,staff,off,h,m,dur,title,done=false)=>({id:++tid,shop,staff,at:at(off,h,m),dur,title,done});
+  TASKS=[T(1,1,0,10,0,30,'鍵の受け取り（管理会社）',true),T(1,1,0,15,0,60,'物件写真の撮影（赤羽西）'),T(1,2,0,11,0,60,'契約書類の作成'),T(1,3,0,17,30,60,'オーナー訪問'),T(1,4,0,9,30,30,'空室確認の電話まとめ',true),T(1,4,1,10,0,60,'内見の下見'),T(1,2,1,14,0,30,'重説の準備'),T(2,5,0,13,0,60,'鍵の返却'),T(2,6,0,10,30,30,'広告の掲載確認')];
+  return L;
+}
+
+/* ---------- 判定 ---------- */
+const byId=id=>DB.find(q=>q.id===id);
+/* 来店の記録（接客した人が書く）と、申込の内容（金額は円）。最初に開いたときに空の入れ物を作る */
+const visOf=q=>q.vis||(q.vis={props:'',result:'',note:''});
+function appOf(q){
+  if(q.app)return q.app;
+  const m=/^(.*?)\s*(\d{2,4})?（.*?([\d.]+)万円）$/.exec(q.property||'');
+  return q.app={bld:m?m[1].trim():(q.property||''),room:m&&m[2]?m[2]:'',rent:m?Math.round(parseFloat(m[3])*10000):'',fee:'',applied:'',movein:'',contract:'',comm:q.amount?Math.round(q.amount*10000):'',ad:'',screen:''};
+}
+/* 来店の回数。終わった来店は pv にためる。2回目からの来店が「再来」 */
+const pastV=q=>q.pv||(q.pv=[]);
+const doneVisits=q=>[...pastV(q),...(q.visit&&q.visit.result==='来店'?[q.visit]:[])];
+const yen=n=>n===''||n==null?'':Number(n).toLocaleString('ja-JP');
+const appTotal=q=>{const a=appOf(q);return (+a.comm||0)+(+a.ad||0)};
+const openVisit=q=>q.visit&&!q.visit.result?q.visit:null;
+function lastContact(q){for(let i=q.acts.length-1;i>=0;i--)if(CONTACT.includes(q.acts[i].k))return q.acts[i];return null}
+function reason(q){
+  if(q.closed||q.stage===5) return null;
+  const n=Date.now(), t0=d0().getTime(), t1=t0+DAY, v=openVisit(q);
+  if(q.reply&&!q.closed) return {key:'reply',rank:0,tone:'danger'};
+  if(q.stage===0){const w=n-q.received; return {key:'new',rank:0,label:'受信から'+elapsed(w),tone:w>60*MIN?'danger':'warn'}}
+  if(v){
+    const s=v.at.getTime();
+    if(s+v.dur*MIN<n) return {key:'result',rank:1,tone:'warn'};
+    if(s<t1) return {key:'visit',rank:6};
+    if(s<t1+DAY&&!v.confirmed) return {key:'precheck',rank:4,tone:'accent'};
+    return null;
+  }
+  if(q.due){const d=q.due.getTime();
+    if(d<t0) return {key:'late',rank:2,over:Math.round((t0-d)/DAY),tone:'danger'};
+    if(d<t1) return {key:'today',rank:3,tone:'warn'};
+    return null}
+  const lc=lastContact(q), days=Math.floor((n-(lc?lc.t:q.received))/DAY);
+  return {key:'stale',rank:5,days,tone:days>=3?'danger':'warn'};
+}
+const needs=q=>{const r=reason(q);return !!r&&r.key!=='visit'};
+function nextCell(q){
+  if(q.closed) return {t:'終了（'+q.closed+'）',tone:''};
+  if(q.stage===5) return {t:'—',tone:''};
+  if(q.reply) return {t:'返信あり',tone:'danger'};
+  const v=openVisit(q), r=reason(q);
+  if(v){const past=v.at.getTime()+v.dur*MIN<Date.now();
+    const w=v.again?'再来 ':'来店 ';return past?{t:w+fmtDay(v.at)+' '+fmtT(v.at)+'・記録待ち',tone:'warn'}:{t:w+fmtDay(v.at)+' '+fmtT(v.at)+(v.confirmed?'':'・確認まだ'),tone:'accent'}}
+  if(q.stage===0) return {t:r.label,tone:r.tone};
+  if(q.due){const w=q.dueWhat||'連絡する';
+    if(r&&r.key==='late') return {t:r.over+'日超過　'+w,tone:'danger'};
+    if(r&&r.key==='today') return {t:'今日　'+w,tone:'warn'};
+    return {t:fmtDay(q.due)+'　'+w,tone:''}}
+  return {t:'予定なし'+(r&&r.days>=3?'・'+r.days+'日連絡なし':''),tone:r?r.tone:'warn'};
+}
+const sub=q=>q.property||[q.wish.area,q.wish.layout,q.wish.rent?('〜'+q.wish.rent+'万円'):''].filter(Boolean).join('・')||q.msg||'';
+const repeatN=q=>q.ck?DB.filter(x=>x.ck===q.ck).length:1;
+function stagePill(q){
+  if(q.closed) return '<span class="pill st">終了</span>';
+  const c=q.stage===0?'danger':q.stage===5?'solid':q.stage===4?'ok':'accent';
+  return `<span class="pill st ${c}">${STAGES[q.stage]}</span>`;
+}
+const fuDone=q=>q.acts.reduce((m,a)=>Math.max(m,a.fu||0),0);
+/* 追メを送れる人なら、次に記録される回（1=追1, 2=追2, 3=追3）。送れない人は0。
+   数えるのは「追メ」ボタンで記録した分だけ。ふつうのメールは数えない。 */
+const fuNextStep=q=>(q.closed||q.stage>1||!q.email||q.reply||openVisit(q)||fuDone(q)>=FOLLOW.length)?0:fuDone(q)+1;
+const fuToday=q=>q.acts.some(a=>a.fu&&dayDiff(a.t)===0);
+/* 「追メ対象」の目安：来店未定・メールあり・問い合わせから2日以上・今日はまだ送っていない */
+function fuDue(q){return fuNextStep(q)&&dayDiff(q.received)<=-2&&!fuToday(q)?fuNextStep(q):0}
+function subSt(q){
+  if(q.closed) return '';
+  let tag=''; const parts=[], v=openVisit(q), nV=doneVisits(q).length;
+  if(q.stage<=1){
+    const n=fuDone(q); if(n)tag+=`<span class="tag fu" title="追メを${n}回送っています">${FOLLOW[n-1].label}</span>`;
+    const cs=q.acts.filter(a=>CONTACT.includes(a.k)); let ng=0; for(let i=cs.length-1;i>=0&&cs[i].k==='tel_ng';i--)ng++;
+    if(ng)parts.push('不通'+ng+'回');
+  }
+  if(v&&v.again)tag+='<span class="tag re">再来</span>'; else if(nV>=2)parts.push('来店'+nV+'回');
+  return tag+(parts.length?`<small>${parts.join('・')}</small>`:'');
+}
+const visitsOn=(day,shop)=>{const a=day.getTime(),b=a+DAY;return DB.filter(q=>q.shop===shop&&q.visit&&q.visit.at>=a&&q.visit.at<b&&!(q.closed&&!q.visit.result)).sort((x,y)=>x.visit.at-y.visit.at)};
+
+/* ---------- 記録 ---------- */
+/* 本番：render のたびに差分を Supabase に保存する（下の flush） */
+let flushT=0;
+function persist(){if(!MEROW)return;clearTimeout(flushT);flushT=setTimeout(flush,120)}
+function snap(q){state.undo=structuredClone(q)}
+function undo(){const s=state.undo;if(!s)return;const i=DB.findIndex(q=>q.id===s.id);if(i>=0)DB[i]=s;state.undo=null;state.recForm=null;state.peek=null;hideToast();render()}
+function log(q,k,text,who){q.acts.push({t:new Date(),k,text:text||'',who:who??null})}
+const defNext=k=>k==='tel_ng'?'1':(k==='mail'||k==='sms')?'3':k==='v_ok'?'1':(k==='v_cancel'||k==='v_no')?'0':'keep';
+const defNote=k=>k==='tel_ng'?'もう一度電話する':(k==='mail'||k==='sms')?'返信がなければもう一度連絡':k==='v_ok'?'お礼と感触の確認':(k==='v_cancel'||k==='v_no')?'来店日の再調整':'連絡する';
+function recForm(q){
+  let f=state.recForm;
+  if(!f||f.id!==q.id){
+    const v=openVisit(q), past=v&&v.at.getTime()+v.dur*MIN<Date.now(), k=past?'v_ok':(q.tel?'tel_ok':'mail');
+    const me=ME(), who=(me&&staffOf(q.shop).some(s=>s.id===me))?me:(q.owner||null);
+    f=state.recForm={id:q.id,who,k,next:defNext(k),touched:false,text:'',note:''};
+  }
+  return f;
+}
+function saveRecord(q){
+  const f=recForm(q), v=openVisit(q), text=f.text.trim();
+  if(!f.who){toast(f.k==='v_ok'?'接客した人を選んでください':'記録する人を選んでください');return}
+  if(f.k==='memo'&&!text){toast('メモの内容を入れてください');return}
+  snap(q); let msg='記録しました'; q.reply=false;
+  if(f.k==='v_ok'&&v){v.result='来店';v.staff=f.who;const first=!q.owner;if(first)q.owner=f.who;q.stage=Math.max(q.stage,3);q.visited=true;
+    const w=v.again?'再来':'来店';if(v.again){const pv=pastV(q);if(pv.length){pv[pv.length-1].rec=q.vis||null;q.vis=null}}log(q,'sys',w+'（接客 '+sname(f.who)+(first?'。担当に決定':'')+'）');if(text)log(q,'memo',text,f.who);msg=q.name+'様：'+w+'を記録'+(first?'し、担当を'+sname(f.who)+'にしました':'しました')}
+  else if((f.k==='v_cancel'||f.k==='v_no')&&v){v.result=f.k==='v_cancel'?'キャンセル':'来なかった';if(q.stage===2)q.stage=1;
+    log(q,'sys',f.k==='v_cancel'?(v.again?'再来の予約':'来店予約')+'がキャンセルになった':'予約の時間に来店なし');if(text)log(q,'memo',text,f.who);msg=q.name+'様：'+v.result+'を記録しました'}
+  else if(f.k==='fu'){const step=fuNextStep(q);if(!step){toast('追メはこれ以上記録できません');return}const lab=FOLLOW[step-1].label;q.acts.push({t:new Date(),k:'mail',who:f.who,text:'追メ（'+lab+'）'+(text?'　'+text:''),fu:step});if(q.stage===0)q.stage=1;msg=q.name+'様：'+lab+' を記録しました'}
+  else{log(q,f.k,text,f.who);if(CONTACT.includes(f.k)&&q.stage===0)q.stage=1;msg=q.name+'様：'+KIND[f.k]+'を記録しました'}
+  const nx=f.next;
+  if(nx==='none'){q.due=null;q.dueWhat=''}
+  else if(nx!=='keep'&&nx!=='book'){q.due=addD(d0(),+nx);q.dueWhat=f.note.trim()||defNote(f.k);msg+='。次は '+fmtDay(q.due)}
+  state.recForm=null; state.rec=null;
+  render(); toast(msg,true);
+  if(nx==='book')openBook(q);
+}
+function book(q,when,dur,cls){
+  snap(q); const had=openVisit(q); if(cls)q.cls=cls;
+  const again=had?!!had.again:doneVisits(q).length>0, w=again?'再来の予約':'来店予約';
+  if(!had&&q.visit&&q.visit.result==='来店')pastV(q).push(q.visit);
+  q.visit={at:when,dur,confirmed:false,result:null,staff:null,again};
+  if(again&&q.stage>=3)visOf(q).result='再来';
+  if(q.stage<2)q.stage=2; if(q.closed)q.closed=null;
+  q.due=null;q.dueWhat='';
+  log(q,'sys',(had?w+'を変更 ':w+' ')+fmtD(when)+' '+fmtT(when));
+  state.recForm=null;state.peek=null;render();toast(q.name+'様：'+fmtD(when)+' '+fmtT(when)+' に'+w+'を入れました',true);
+}
+function setStage(q,s,staff){
+  if(s===q.stage&&!q.closed)return;
+  if(s===2&&!openVisit(q)){openBook(q);return}
+  if(s>=3&&!q.owner&&!staff){askOwner(q,st=>setStage(q,s,st));return}
+  snap(q); const from=q.closed?'終了':STAGES[q.stage], v=openVisit(q);
+  if(staff){q.owner=staff;log(q,'sys','担当を'+sname(staff)+'に決定')}
+  if(s>=3&&v){v.result='来店';v.staff=q.owner}
+  q.closed=null;q.stage=s; if(s>=3)q.visited=true; if(s>=4){q.due=null;q.dueWhat=''}
+  log(q,'sys','進み具合を「'+from+'」から「'+STAGES[s]+'」へ');
+  state.recForm=null;state.peek=null;render();toast(q.name+'様を「'+STAGES[s]+'」にしました',true);
+}
+function closeAs(q,r){
+  snap(q);q.closed=r;q.due=null;q.dueWhat='';const v=openVisit(q);if(v)v.result='キャンセル';
+  log(q,'sys','終了（'+r+'）');state.recForm=null;render();toast(q.name+'様を終了（'+r+'）にしました',true);
+}
+
+/* ---------- 画面の骨組み ---------- */
+const view=$('#view');
+const ALLTABS=[['list','反響一覧',IC.list],['cal','カレンダー',IC.cal],['nums','数字',IC.nums],['mail','メール',IC.mailN]];
+let TABS=ALLTABS.filter(t=>APPS[APP].views.includes(t[0]));
+function setApp(a){if(a===APP)return;APP=a;HOME=APPS[a].views[0];TABS=ALLTABS.filter(t=>APPS[a].views.includes(t[0]));document.title=APPS[a].name+'｜Vision';
+  Object.assign(state,{view:HOME,back:HOME,custId:null,rec:null,recForm:null,peek:null,flash:null,mailId:null,mdraft:null});render();window.scrollTo(0,0)}
+window.addEventListener('hashchange',()=>setApp(appFromLoc()));
+const IC_EXT='<svg class="ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+function demoCtl(){
+  return `<label>見た目<select data-df="look">${Object.entries(LOOKS).map(([k,l])=>`<option value="${k}" ${state.look===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <p class="mnote" style="margin:6px 0 0">${authUser?esc(authUser.email):''}</p>
+  <button class="linkbtn" data-act="logout">ログアウト</button>`;
+}
+function renderSide(){
+  const r=roleInfo(), n=scope().filter(needs).length, cur=state.view==='cust'?state.back:state.view;
+  $('#ctx').innerHTML=`<span class="av">${esc(r.label[0])}</span><span><b>${r.label}</b>${r.sub}</span>`;
+  $('.bname').textContent=APPS[APP].name;
+  $('#nav').innerHTML=TABS.map(([v,l,ic])=>`<button data-act="tab" data-v="${v}" ${cur===v?'aria-current="page"':''}>${ic}<span>${l}</span>${v==='list'&&n?`<span class="count" title="対応が必要な件数">${n}</span>`:''}</button>`).join('')
+    +`<div class="navlab" style="margin-top:14px">ほかのアプリ</div>`+Object.entries(APPS).filter(([k])=>k!==APP).map(([k,a])=>`<a href="${a.url}" title="${a.name}を開く">${IC[a.ic]}<span>${a.name}</span></a>`).join('');
+}
+function render(){
+  persist();
+  document.documentElement.dataset.look=state.look;
+  renderSide();
+  const v=state.view;
+  view.innerHTML=viewHTML(v);
+  $$('.demo-ctl').forEach(el=>{el.innerHTML=demoCtl()});
+}
+const viewHTML=v=>v==='list'?vList():v==='cal'?vCal():v==='nums'?vNums():v==='mail'?vMail():vCust();
+function go(v){if(v!=='cust'&&!TABS.some(t=>t[0]===v)){const k=Object.keys(APPS).find(x=>APPS[x].views.includes(v));if(k){location.href=APPS[k].url}return}
+  state.flash=null;state.peek=null;state.view=v;state.custId=null;state.rec=null;state.recForm=null;render();window.scrollTo(0,0)}
+function openCust(id){state.flash=null;state.peek=null;if(state.view!=='cust')state.back=state.view;state.view='cust';state.custId=id;state.rec=null;state.recForm=null;render();window.scrollTo(0,0)}
+const tags=q=>repeatN(q)>1?`<span class="pill accent">${repeatN(q)}回目</span>`:'';
+const opt=(v,l,cur)=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`;
+
+/* ---------- 反響一覧 ---------- */
+const PRESETS=[['all','すべて',()=>true],['new','未対応',q=>!q.closed&&q.stage===0],['novisit','来店未定',q=>!q.closed&&q.stage<=1],['booked','来店予約',q=>!q.closed&&(q.stage===2||!!openVisit(q))],['visited','来店済',q=>!q.closed&&q.stage===3],['apply','申込',q=>!q.closed&&q.stage===4],['won','成約',q=>!q.closed&&q.stage===5],['closed','終了',q=>!!q.closed]];
+function baseList(){
+  const f=state.f, k=norm(f.q), now=Date.now(), t0=d0().getTime();
+  return scope().filter(q=>{
+    if(k&&![q.name,q.kana,q.tel,q.email,q.property,q.msg].some(x=>norm(x).includes(k)))return false;
+    if(f.media&&q.media!==f.media)return false;
+    if(f.cls){if(f.cls==='none'){if(q.cls)return false}else if(q.cls!==f.cls)return false}
+    if(f.owner){if(f.owner==='none'){if(q.owner)return false}else if(q.owner!==+f.owner)return false}
+    const r=q.received.getTime();
+    if(f.period==='today'&&r<t0)return false;
+    if(f.period==='7'&&r<now-7*DAY)return false;
+    if(f.period==='30'&&r<now-30*DAY)return false;
+    if(f.period==='custom'){if(f.from&&r<ymd(f.from).getTime())return false;if(f.to&&r>=ymd(f.to).getTime()+DAY)return false}
+    return true});
+}
+function listRows(){
+  const f=state.f, p=PRESETS.find(x=>x[0]===f.preset)||PRESETS[0];
+  let L=baseList().filter(p[2]); if(f.att)L=L.filter(needs); if(f.fu)L=L.filter(fuDue);
+  const nextT=q=>{const v=openVisit(q);return v?v.at.getTime():q.due?q.due.getTime():Infinity};
+  if(f.sort==='urgent')L.sort((a,b)=>((reason(a)||{rank:9}).rank-(reason(b)||{rank:9}).rank)||(a.received-b.received));
+  else if(f.sort==='next')L.sort((a,b)=>(nextT(a)-nextT(b))||(b.received-a.received));
+  else L.sort((a,b)=>b.received-a.received);
+  return L;
+}
+function chipsHTML(){
+  const base=baseList(), f=state.f;
+  return PRESETS.map(([k,l,fn])=>`<button class="preset" data-act="preset" data-p="${k}" aria-pressed="${f.preset===k}">${l}<b>${base.filter(fn).length}</b></button>`).join('');
+}
+/* いちばん上の件数の札。押すと、その条件で絞り込む */
+function kpisHTML(){
+  const base=baseList(), f=state.f;
+  const k=(act,pressed,tone,ic,label,n,sub,tip)=>`<button class="kpi ${tone}" data-act="${act}" aria-pressed="${pressed}" title="${tip}"><span class="kpi-ic">${ic}</span><span class="kpi-l">${label}</span><b>${n}</b></button>`;
+  return k('kpi-new',f.preset==='new','danger',IC.inbox,'未対応',base.filter(q=>!q.closed&&q.stage===0).length,'まだ誰も連絡していない','まだ誰も連絡していない反響だけにします')
+    +k('att',f.att,'warn',IC.bell,'要対応',base.filter(needs).length,'期限切れ・返信あり・記録待ち','未対応・期限切れ・お客様から返信あり・来店結果の記録待ちなど、手を付ける必要があるものだけにします')
+    +k('fu-filter',f.fu,'accent',IC.mail,'追メ対象',base.filter(fuDue).length,'今日、追メを送る相手','来店未定・メールあり・問い合わせから2日以上・今日まだ追メを送っていない人だけにします')
+    +k('today-visits',false,'ok',IC.visit,'今日の来店',base.filter(q=>{const v=openVisit(q);return v&&dayDiff(v.at)===0}).length,'カレンダーで見る','カレンダー（別のアプリ）を開きます');
+}
+function rowHTML(q){
+  const nx=nextCell(q), open=state.rec===q.id, showShop=scopeShop()==null, showH=state.hist||open||hOpen.has(q.id);
+  const lc=lastContact(q), own=q.owner?`<span class="av xs a${q.owner%6}" aria-hidden="true">${esc(sname(q.owner)[0])}</span>${esc(sname(q.owner))}`:lc&&lc.who?`<span class="sub">前回 ${esc(sname(lc.who))}</span>`:'<span class="sub">—</span>';
+  return `<div class="lrow${open?' open':''}${state.flash===q.id?' flash':''}${showH?' hasH':''}" data-act="open" data-id="${q.id}" tabindex="0" role="button">
+    <div class="c-recv"><span class="num">${fmtD(q.received)} ${fmtT(q.received)}</span>${showShop?`<small>${shopName(q.shop)}</small>`:''}</div>
+    <div class="c-name"><span class="av a${q.id%6}" aria-hidden="true">${esc(q.name[0])}</span><div><b>${esc(q.name)}</b>${tags(q)}<small class="num">${esc(q.tel||q.email)}</small></div></div>
+    <div class="c-inq"><span class="tag">${esc(q.media)}</span>${q.cls?`<span class="tag cls">${q.cls}</span>`:''}<span class="ell${q.property?' full':''}">${esc(sub(q))}</span>${ieLink(q.property)}</div>
+    <div class="c-st">${stagePill(q)}${subSt(q)}</div>
+    <div class="c-next ${nx.tone}">${esc(nx.t)}</div>
+    <div class="c-own">${own}</div>
+    <div class="c-act">${state.f.fu&&q.email?`<button class="btn sm primary" data-act="fu-send" data-id="${q.id}">${IC.mailS}${FOLLOW[fuDue(q)-1].label}を送る</button>`:''}${state.hist?'':`<button class="btn sm ghost ico" data-act="hist-row" data-id="${q.id}" aria-expanded="${showH}" aria-label="やり取りを${showH?'閉じる':'開く'}" title="やり取り">${IC.chev}</button>`}<button class="btn sm" data-act="rec" data-id="${q.id}" aria-expanded="${open}">${IC.pen}記録</button></div>
+  </div>${showH?histHTML(q):''}${open?`<div class="lstrip">${recorder(q,'list')}</div>`:''}`;
+}
+/* 一覧に広げて出す経緯。古い順に、日ごとにまとめる。続けてかけた不通の電話は1行にまとめる */
+const HK={in:'問い合わせ',reply:'お客様から返信',tel_ok:'電話 つながった',tel_ng:'電話 不通',mail:'メール送信',sms:'SMS・LINE',memo:'メモ'};
+function histHTML(q,flat){
+  const days=[];
+  [...q.acts].sort((a,b)=>a.t-b.t).forEach(a=>{
+    const d=fmtD(a.t); let day=days[days.length-1]; if(!day||day.d!==d){day={d,list:[]};days.push(day)}
+    const last=day.list[day.list.length-1];
+    if(a.k==='tel_ng'&&!a.text&&last&&last.k==='tel_ng'&&!last.text&&last.who===a.who){last.ts.push(fmtT(a.t));return}
+    day.list.push({k:a.k,ts:[fmtT(a.t)],who:a.who,auto:a.auto,text:a.text||'',fu:a.fu});
+  });
+  const line=x=>{
+    const cu=x.k==='in'||x.k==='reply', label=x.k==='sys'?'':x.fu?'追メ（'+FOLLOW[x.fu-1].label+'）':HK[x.k]||'';
+    const text=x.fu&&x.text.startsWith('追メ（')?x.text.replace(/^追メ（[^）]*）[\s　]*/,''):x.text;
+    const who=cu||x.k==='sys'?'':x.auto?'自動記録':x.who?sname(x.who):'';
+    return `<p class="lh ${cu?'cu':x.k==='tel_ng'?'ng':x.k==='sys'?'sy':x.k==='mail'||x.k==='sms'?'long':''}"><span class="lh-t">${x.ts.join('・')}</span>${label?`<b>${label}</b>`:''}<span class="lh-x">${esc(text)}</span>${who?`<span class="lh-w">${esc(who)}</span>`:''}</p>`};
+  const inner=days.map(d=>`<div class="lh-d">${d.d}</div><div class="lh-i">${d.list.map(line).join('')}</div>`).join('');
+  return flat?`<div class="lhist flat">${inner}</div>`:`<div class="lhist" data-act="open" data-id="${q.id}">${inner}</div>`;
+}
+const lbarHTML=()=>`<div class="segbtn" role="group" aria-label="やり取りの表示"><button data-act="hist-set" data-v="0" aria-pressed="${!state.hist}">たたむ</button><button data-act="hist-set" data-v="1" aria-pressed="${!!state.hist}">すべて開く</button></div>`;
+function bodyHTML(){
+  const L=listRows(), total=scope().length;
+  return (L.length?L.map(rowHTML).join(''):'<div class="lempty">該当なし</div>')
+    +`<div class="lfoot">${total}件中 ${L.length}件</div>`;
+}
+function refreshList(){const c=$('#chips'),b=$('#list-body'),l=$('#lbar'),k=$('#kpis');if(c)c.innerHTML=chipsHTML();if(b)b.innerHTML=bodyHTML();if(l)l.innerHTML=lbarHTML();if(k)k.innerHTML=kpisHTML()}
+function vList(){
+  const f=state.f, hq=myShop()==null, sh=scopeShop(), me=ME();
+  const staff=sh==null?STAFF:staffOf(sh);
+  return `<div class="vhead"><div><h1>反響一覧<small>${hq?(sh==null?'全店舗':shopName(sh)):shopName(sh)}</small></h1></div>
+    <div class="tools">${hq?`<span class="propst">${PROPS?`いえらぶの物件 ${PROPS.length}件（${fmtD(PROPS_AT)} ${fmtT(PROPS_AT)} 取込）`:'物件の候補：未取込'}</span><button class="btn sm" data-act="prop-csv">${PROPS?'物件CSVを取り込み直す':'いえらぶの物件CSVを取り込む'}</button>${PROPS?`<button class="btn sm ghost" data-act="prop-clear">戻す</button>`:''}<input type="file" id="prop-file" accept=".csv,text/csv" hidden>`:''}<button class="btn primary" data-act="new">${IC.plus}問い合わせを登録</button></div></div>
+  <div class="kpis" id="kpis">${kpisHTML()}</div>
+  <div class="card list">
+    <div class="ltabs"><div class="presets" id="chips" role="group" aria-label="状況で絞り込む">${chipsHTML()}</div><div class="lbar" id="lbar">${lbarHTML()}</div></div>
+    <div class="filters"><div class="frow">
+      <div class="search">${IC.search}<input id="f-q" data-ff="q" type="search" value="${esc(f.q)}" placeholder="名前・電話番号・物件でさがす" autocomplete="off" aria-label="反響をさがす"></div>
+      ${hq?`<select class="sel" id="f-shop" data-ff="shop" aria-label="店舗">${opt('','全店舗',f.shop)}${SHOPS.map(s=>opt(s.id,s.name,f.shop)).join('')}</select>`:''}
+      <select class="sel" id="f-period" data-ff="period" aria-label="受信日">${[['all','受信日：すべて'],['today','今日'],['7','直近7日'],['30','直近30日'],['custom','日付を指定']].map(([v,l])=>opt(v,l,f.period)).join('')}</select>
+      ${f.period==='custom'?`<input class="sel" type="date" id="f-from" data-ff="from" value="${f.from}" aria-label="受信日の開始"><span>〜</span><input class="sel" type="date" id="f-to" data-ff="to" value="${f.to}" aria-label="受信日の終了">`:''}
+      <select class="sel" id="f-media" data-ff="media" aria-label="きっかけ">${opt('','きっかけ：すべて',f.media)}${MEDIA.map(m=>opt(m,m,f.media)).join('')}</select>
+      <select class="sel" id="f-cls" data-ff="cls" aria-label="分類">${opt('','分類：すべて',f.cls)}${CLS.map(c=>opt(c,c,f.cls)).join('')}${opt('none','未設定',f.cls)}</select>
+      <select class="sel" id="f-owner" data-ff="owner" aria-label="担当">${opt('','担当：すべて',f.owner)}${opt('none','未定（来店前）',f.owner)}${staff.map(s=>opt(s.id,s.name+(s.id===me?'（自分）':''),f.owner)).join('')}</select>
+      <select class="sel" id="f-sort" data-ff="sort" aria-label="並び順">${[['new','新しい順'],['urgent','急ぐ順'],['next','次の予定が近い順']].map(([v,l])=>opt(v,l,f.sort)).join('')}</select>
+    </div></div>
+    <div class="lhead"><div>受信</div><div>お客様</div><div>きっかけ・分類・物件</div><div>状況</div><div>次にやること</div><div>担当</div><div></div></div>
+    <div id="list-body">${bodyHTML()}</div>
+  </div>`;
+}
+
+/* 記録の入力（一覧の行の下と、お客様の画面で同じものを使う） */
+function recorder(q,where,S){
+  const f=recForm(q), v=openVisit(q), isV=f.k.startsWith('v_'), stg=S??q.stage;
+  const kinds=[...(v?[['v_ok',v.again?'再来した':'来店した'],['v_cancel','キャンセル'],['v_no','来なかった']]:[]),...(q.tel?[['tel_ok','電話つながった'],['tel_ng','電話不通']]:[]),...(q.email?[['mail','メールした']]:[]),...(fuNextStep(q)?[['fu','追メ送った']]:[]),...(q.tel?[['sms','SMS・LINE']]:[]),['memo','メモだけ']];
+  const nexts=[['keep','変えない'],['0','今日'],['1','明日'],['3','3日後'],['7','1週間後'],['book',doneVisits(q).length?'再来の予約へ':'来店予約へ']];
+  const hint=f.k==='fu'?FOLLOW[fuNextStep(q)-1].label+'として記録':f.k==='v_ok'&&!q.owner?'接客した人が担当になります':'';
+  const flow=(S!=null||!q.closed)&&stg<5;
+  const contact=where==='list'?`<div class="rec-row"><span class="rec-l">連絡先</span><div class="rec-in">${q.tel?`<span class="num" style="font-weight:600">${esc(q.tel)}</span><button class="copy" data-act="copy" data-t="${esc(q.tel)}">コピー</button>`:''}${q.email?`<span style="font-size:13.5px;overflow-wrap:anywhere">${esc(q.email)}</span><button class="btn sm" data-act="mail-send" data-id="${q.id}">${IC.mailS}メールを送る</button>`:''}</div></div>`:'';
+  return `<div class="rec${where==='cust'?' boxed':''}" data-id="${q.id}">
+    ${where==='cust'?`<h2 class="rec-h">${flow?`<span class="stepn">${stg===3?4:3}</span>`:''}${stg>=3?'連絡を記録する':'記録する'}</h2>`:''}${contact}
+    <div class="rec-row"><span class="rec-l">したこと</span><div class="rec-in">${kinds.map(([k,l])=>`<button type="button" class="chip" data-act="rf" data-k="k" data-v="${k}" data-id="${q.id}" aria-pressed="${f.k===k}">${l}</button>`).join('')}</div></div>
+    <div class="rec-row"><span class="rec-l">内容</span><div class="rec-in"><input class="inp" id="rf-text-${where}" data-rf="text" value="${esc(f.text)}" placeholder="メモ" maxlength="300"></div></div>
+    <div class="rec-row"><span class="rec-l">次にやること</span><div class="rec-in">${nexts.map(([k,l])=>`<button type="button" class="chip" data-act="rf" data-k="next" data-v="${k}" data-id="${q.id}" aria-pressed="${f.next===k}">${l}</button>`).join('')}
+      ${f.next!=='keep'&&f.next!=='book'?`<input class="inp" id="rf-note-${where}" data-rf="note" value="${esc(f.note)}" placeholder="${esc(defNote(f.k))}" maxlength="60" aria-label="やることの内容">`:''}</div></div>
+    <div class="rec-row"><span class="rec-l">${f.k==='v_ok'?'接客した人':'記録する人'}</span><div class="rec-in">${staffOf(q.shop).map(s=>`<button type="button" class="chip" data-act="rf" data-k="who" data-v="${s.id}" data-id="${q.id}" aria-pressed="${f.who===s.id}">${esc(s.name)}</button>`).join('')}</div></div>
+    <div class="rec-foot"><button class="btn primary" data-act="rf-save" data-id="${q.id}">記録する</button>${where==='list'?'<button class="btn ghost" data-act="rf-x">やめる</button>':''}${hint?`<span class="rec-hint">${hint}</span>`:''}</div>
+  </div>`;
+}
+
+/* ---------- カレンダー ---------- */
+const xOf=d=>((d.getHours()*60+d.getMinutes())-H0*60)/30*SLOT;
+function lanes(items){
+  const ends=[]; items.sort((a,b)=>a.at-b.at);
+  items.forEach(it=>{const a=it.at.getTime(),b=a+Math.max(it.dur,Math.ceil((it.lw||0)/SLOT)*30)*MIN;let c=ends.findIndex(e=>e<=a);if(c<0){c=ends.length;ends.push(b)}else ends[c]=b;it.lane=c});
+  return Math.max(1,ends.length);
+}
+function vBlock(q,showCls){
+  const v=q.visit, cls=v.result==='来店'?'done':v.result?'off':v.confirmed?'conf':'', st=v.result==='来店'?'来店済み'+(v.staff?'・'+sname(v.staff):''):v.result||(v.confirmed?'確認済み':'確認まだ');
+  const s2=fmtT(v.at)+'　'+(v.again?'再来　':'')+(showCls&&q.cls?q.cls+'　':'')+(v.result==='来店'?'来店済み':v.result||(v.confirmed?'確認済み':'確認まだ'));
+  return {kind:'visit',id:q.id,at:v.at,dur:v.dur,cls,lw:18+Math.max(q.name.length*14,s2.length*10),tip:q.name+'・'+(v.again?'再来・':'')+(q.cls||'分類なし')+'・'+fmtT(v.at)+'から'+v.dur+'分・'+st,inner:`<span class="tb"><b>${esc(q.name)}</b>${esc(s2)}</span>`};
+}
+function tBlock(t){
+  return {kind:'task',id:t.id,at:t.at,dur:t.dur,cls:'task'+(t.done?' fin':''),lw:40+t.title.length*14,tip:sname(t.staff)+'・'+t.title+'・'+fmtT(t.at)+'から'+t.dur+'分'+(t.done?'・済み':''),
+    inner:`<button class="tdone" data-act="task-done" data-id="${t.id}" aria-label="${t.done?'済みを取り消す':'済みにする'}" aria-pressed="${t.done}">${t.done?'✓':''}</button><span class="tb"><b>${esc(t.title)}</b>${fmtT(t.at)}〜${fmtT(new Date(t.at.getTime()+t.dur*MIN))}</span>`};
+}
+function trow(lab,attrs,blocks,today,addable){
+  const n=lanes(blocks), W=(H1-H0)*2*SLOT, now=(Date.now()-d0().getTime())/MIN-H0*60;
+  return `<div class="trow" ${attrs}>${lab}<div class="tline${addable?' addable':''}" style="width:${W}px;height:${blocks.length?n*LH+4:36}px">${today&&now>0&&now<(H1-H0)*60?`<i class="nowline" style="left:${now/30*SLOT}px"></i>`:''}${blocks.map(b=>`<div class="tblk ${b.cls}" data-kind="${b.kind}" data-id="${b.id}" style="left:${xOf(b.at)+1}px;width:${Math.max(b.dur/30*SLOT-3,26)}px;top:${b.lane*LH+4}px" data-tip="${esc(b.tip)}">${b.inner}</div>`).join('')}</div></div>`;
+}
+function attSummary(shop,day){
+  const S=staffOf(shop), today=dayDiff(day)===0;
+  if(!JINJER_ON)return `<span class="attsum" style="font-weight:400">Jinjer 未接続</span>`;
+  if(!today){const o=S.filter(s=>isOff(attOf(s.id,day)));return `<span class="attsum">${o.length?'休み '+o.length+'人（Jinjerの休暇申請）':'休みの申請なし'}</span>`}
+  const n=k=>S.filter(s=>(ATT[s.id]||{s:'none'}).s===k).length;
+  return `<span class="attsum">出勤 ${n('in')+n('out')}・休み ${n('off')+n('leave')}・未打刻 ${n('none')}　<span style="font-weight:400">Jinjerの打刻 ${ATT_AT}時点</span></span>`;
+}
+function freeRow(shop,day,vs,today){
+  const S=staffOf(shop), N=(H1-H0)*2, W=N*SLOT, a=day.getTime(), cells=[];
+  const ts=TASKS.filter(t=>t.shop===shop&&!t.done&&t.at>=a&&t.at<a+DAY), vv=vs.filter(q=>!q.visit.result||q.visit.result==='来店');
+  for(let i=0;i<N;i++){const s0=a+(H0*60+i*30)*MIN, s1=s0+30*MIN;
+    const here=S.filter(x=>present(x.id,day)), busyIds=new Set(ts.filter(t=>t.at<s1&&t.at.getTime()+t.dur*MIN>s0).map(t=>t.staff));
+    let n=here.filter(x=>!busyIds.has(x.id)).length;
+    vv.forEach(q=>{const v=q.visit;if(v.at<s1&&v.at.getTime()+v.dur*MIN>s0)n--});
+    cells.push(`<span class="${n>=2?'ok':n===1?'warn':'bad'}" style="left:${i*SLOT+2}px;width:${SLOT-4}px" title="${H0+Math.floor(i/2)}:${i%2?'30':'00'}　接客できる人 ${Math.max(n,0)}人">${Math.max(n,0)}</span>`)}
+  return `<div class="trow"><div class="tlab"><span>接客できる人</span><small>出勤−予定−来店</small></div><div class="tline frees" style="width:${W}px;height:34px">${cells.join('')}</div></div>`;
+}
+function vCal(){
+  SLOT=Math.max(34,Math.floor(((view.clientWidth||1000)-136)/((H1-H0)*2)));
+  const shop=calShop(), day=state.calDay, me=ME(), hq=myShop()==null, W=(H1-H0)*2*SLOT;
+  const head=`<div class="trow thead"><div class="tlab"></div><div class="tline" style="width:${W}px">${[...Array(H1-H0)].map((_,i)=>`<span style="left:${i*2*SLOT}px">${H0+i}:00</span>`).join('')}</div></div>`;
+  let rows='', title='', duebar='';
+  if(state.calMode==='day'){
+    const isToday=dayDiff(day)===0, vs=visitsOn(day,shop), a=day.getTime(), b=a+DAY;
+    title=fmtD(day)+(isToday?'（今日）':'');
+    const groups=[...CLS,...(vs.some(q=>!q.cls)?[null]:[])];
+    rows=`<div class="tsep"><span>来店（分類別）　${vs.length}件</span></div>`+groups.map(c=>{const L=vs.filter(q=>(q.cls||null)===c);
+        return trow(`<div class="tlab"><span>${c||'分類なし'}<small style="display:inline;margin-left:6px">${L.length}件</small></span>${c?`<button class="linkbtn" data-act="visit-new" data-cls="${c}">＋ 来店</button>`:''}</div>`,`data-day="${a}" data-cls="${c||''}"`,L.map(q=>vBlock(q,false)),isToday,false)}).join('')
+      +`<div class="tsep"><span>スタッフの予定${attSummary(shop,day)}</span></div>`+freeRow(shop,day,vs,isToday)+staffOf(shop).map(s=>{const ts=TASKS.filter(t=>t.staff===s.id&&t.at>=a&&t.at<b), at=attOf(s.id,day), off=isOff(at);
+        return trow(`<div class="tlab${s.id===me?' me':''}">${esc(s.name)}${s.id===me?'<small>自分</small>':''}${attLabel(at)?`<small class="att ${at.s}">${attLabel(at)}</small>`:''}${off?'':`<button class="linkbtn" data-act="task-new" data-staff="${s.id}">＋ 予定</button>`}</div>`,`data-day="${a}" data-staff="${s.id}"${off?' data-off="1"':''}`,ts.map(tBlock),isToday,!off)}).join('');
+    const dues=DB.filter(q=>q.shop===shop&&!q.closed&&q.stage<5&&!openVisit(q)&&q.due&&q.due.getTime()===a);
+    duebar=`<div class="duebar"><span>連絡予定 ${dues.length}件</span>${dues.map(q=>`<button class="duechip" data-act="open" data-id="${q.id}">${esc(q.name)}　${esc(q.dueWhat||'連絡する')}</button>`).join('')}</div>`;
+  }else{
+    const wk=addD(day,-((day.getDay()+6)%7)), days=[...Array(7)].map((_,i)=>addD(wk,i));
+    title=fmtD(days[0])+'〜'+fmtD(days[6]);
+    rows=days.map(d=>{const vs=visitsOn(d,shop), t=dayDiff(d)===0;
+      const offs=staffOf(shop).filter(s=>isOff(attOf(s.id,d))).map(s=>s.name);
+      return trow(`<div class="tlab${t?' me':''}"><button class="daybtn" data-act="cal-day" data-d="${d.getTime()}">${fmtD(d)}${t?'　今日':''}</button><small>来店 ${vs.length}件</small>${offs.length?`<small class="att off">休み：${esc(offs.join('・'))}</small>`:''}</div>`,`data-day="${d.getTime()}"`,vs.map(q=>vBlock(q,true)),t,false)}).join('');
+  }
+  const step=state.calMode==='day'?1:7;
+  return `<div class="vhead"><div><h1>カレンダー<small>${shopName(shop)}　${title}</small></h1></div>
+    <div class="tools">${hq?`<select class="sel" id="cal-shop" data-cf="shop" aria-label="店舗">${SHOPS.map(s=>opt(s.id,s.name,shop)).join('')}</select>`:''}
+      <div class="segbtn" role="group" aria-label="表示の切り替え"><button data-act="cal-mode" data-m="day" aria-pressed="${state.calMode==='day'}">日</button><button data-act="cal-mode" data-m="week" aria-pressed="${state.calMode==='week'}">週</button></div>
+      <button class="btn sm" data-act="cal-go" data-n="${-step}">前へ</button><button class="btn sm" data-act="cal-go" data-n="0">今日</button><button class="btn sm" data-act="cal-go" data-n="${step}">次へ</button></div></div>
+  <div class="card" style="overflow:hidden">${duebar}<div class="tlwrap"><div class="tlgrid" id="tlgrid" style="--slot:${SLOT}px">${head}${rows}</div></div></div>
+  <div class="legend"><span><i style="background:var(--surface);border:1.5px dashed var(--accent)"></i>来店・確認まだ</span><span><i style="background:var(--accent-soft);border:1.5px solid var(--accent)"></i>来店・確認済み</span><span><i style="background:var(--ok-soft)"></i>来店済み</span><span><i style="background:var(--surface-2);border:1.5px solid var(--line-2)"></i>スタッフの予定</span></div>`;
+}
+
+/* ---------- メール（お客様とのやり取りだけ。業者・本部のメールは Outlook のまま） ---------- */
+const MAILK=new Set(['in','reply','mail']);
+const lastMail=q=>{for(let i=q.acts.length-1;i>=0;i--)if(MAILK.has(q.acts[i].k))return q.acts[i];return null};
+let UNM=[];
+function mailThreads(){
+  const f=state.mf; let L=scope().filter(q=>q.email);
+  if(f==='reply')L=L.filter(q=>q.reply); else if(f==='fu')L=L.filter(fuDue);
+  const k=norm(state.mq); if(k)L=L.filter(q=>[q.name,q.kana,q.email,q.property].some(x=>norm(x).includes(k)));
+  return L.sort((a,b)=>((b.reply?1:0)-(a.reply?1:0))||((lastMail(b)||{t:0}).t-(lastMail(a)||{t:0}).t));
+}
+function mlistHTML(){
+  const L=mailThreads(), hq=myShop()==null;
+  if(!L.length)return `<div class="mempty">該当するお客様はいません</div>`;
+  return L.map(q=>{const m=lastMail(q), sn=m?(m.k==='mail'?'送信：':m.k==='reply'?'返信：':'')+(m.body||m.text||''):'';
+    return `<div class="mitem${state.mailId===q.id?' on':''}" data-act="ml-open" data-id="${q.id}" role="button" tabindex="0"><span class="av">${esc(q.name[0])}</span><div style="min-width:0"><div class="mi-n"><b>${esc(q.name)}</b>${hq?`<small>${shopName(q.shop)}</small>`:''}${subSt(q)}</div><div class="sn">${esc(sn)}</div></div><div class="mi-r"><span>${m?fmtDay(m.t):''}</span>${q.reply?'<i class="dot" title="返信あり"></i>':''}</div></div>`}).join('');
+}
+function threadHTML(q){
+  const me=ME(), d=state.mdraft&&state.mdraft.id===q.id?state.mdraft:null, step=d?+d.t:(!q.reply?fuNextStep(q):0);
+  const fill=t=>t.replace(/\{name\}/g,q.name).replace(/\{shop\}/g,shopName(q.shop));
+  const sj=d?d.s:(step?fill(TPL[step].s):''), bd=d?d.b:(step?fill(TPL[step].b):''), who=d?d.who:null;
+  const items=q.acts.filter(a=>MAILK.has(a.k)||a.k==='tel_ok'||a.k==='tel_ng'||(a.k==='sys'&&/来店|再来|申込|成約/.test(a.text))).sort((a,b)=>a.t-b.t);
+  const msgs=items.map(a=>{const ts=fmtD(a.t)+' '+fmtT(a.t);
+    if(a.k==='in')return `<div class="msg in"><span class="mt"><b>${esc(q.name)} 様</b>${ts}・${esc(q.media)}から</span>${q.property?`<div class="ms">${esc(q.property)} ${ieLink(q.property)}</div>`:''}${esc(a.text||'（本文なし）')}</div>`;
+    if(a.k==='reply')return `<div class="msg in"><span class="mt"><b>${esc(q.name)} 様</b>${ts}・返信</span>${esc(a.text)}</div>`;
+    if(a.k==='mail')return `<div class="msg out"><span class="mt"><b>${esc(a.who?sname(a.who):'いえらぶ')}</b>${ts}${a.fu?'・追'+a.fu:''}</span><div class="ms">${esc(/^追メ（[^）]*）$/.test(a.text)&&a.fu?TPL[a.fu].s:a.text.replace(/^追メ（[^）]*）　/,''))}</div>${a.body?esc(a.body):'<span class="mnote">（本文は残っていません）</span>'}</div>`;
+    return `<div class="msg sys">${ts}　${esc(a.k==='tel_ok'?'電話 つながった':a.k==='tel_ng'?'電話 不通':a.text)}${a.who?'（'+esc(sname(a.who))+'）':''}</div>`}).join('');
+  return `<div class="th-head"><div class="who"><span class="av">${esc(q.name[0])}</span><div style="min-width:0"><b>${esc(q.name)} 様</b>${subSt(q)}<small>${esc(q.email)}　${shopName(q.shop)}　${esc(q.closed?'終了':STAGES[q.stage])}</small></div></div>
+      <div class="rowwrap" style="margin-top:0"><button class="btn sm ico" data-act="ml-back" aria-label="一覧へ">${IC.back}</button><button class="btn sm" data-act="open" data-id="${q.id}">お客様の画面</button></div></div>
+    <div class="msgs" id="msgs">${msgs||'<div class="mempty">やり取りはまだありません</div>'}</div>
+    <form class="compose" id="ml-form" novalidate>
+      <div class="cp2"><select class="sel" id="ml-t" aria-label="ひな型">${opt('','ひな型を使わない',step||'')}${FOLLOW.map((f,i)=>opt(i+1,f.label+'　'+TPL[i+1].s,step||'')).join('')}</select><input class="inp" value="差出人：${esc(shopName(q.shop))}のアドレス" readonly aria-label="差出人"></div>
+      <input class="inp" id="ml-s" placeholder="件名" maxlength="120" value="${esc(sj)}">
+      <textarea class="inp" id="ml-b" placeholder="本文" maxlength="4000">${esc(bd)}</textarea>
+      <div class="cpfoot">${me?'':`<span class="mnote">送る人</span>${staffOf(q.shop).map(x=>`<button type="button" class="chip" data-act="ml-who" data-v="${x.id}" aria-pressed="${who===x.id}">${esc(x.name)}</button>`).join('')}`}<button class="btn primary" type="submit">${step?FOLLOW[step-1].label+'として送る':'送信する'}</button><span class="mnote">送った時点で反響帳に記録されます</span></div>
+    </form>`;
+}
+function unmHTML(){
+  const hq=myShop()==null, L=UNM.filter(u=>hq?(!state.f.shop||u.shop===+state.f.shop):u.shop===myShop());
+  return `<div class="unm">${L.length?L.map(u=>`<div class="card"><div class="uf">${esc(u.from)}　→　${shopName(u.shop)}のアドレス　${fmtDay(u.t)} ${fmtT(u.t)}</div><div class="us">${esc(u.s)}</div><div class="ub">${esc(u.body)}</div><div class="ua"><button class="btn sm" data-act="unm-link" data-id="${u.id}">お客様に紐づける</button><button class="btn sm ghost" data-act="unm-drop" data-id="${u.id}">捨てる</button></div></div>`).join(''):'<div class="card mempty">紐づかなかったメールはありません</div>'}
+    <p class="mnote">お客様のアドレスでも反響メールでもないものはここに30日だけ残り、店舗の画面には出ません。元のメールはOutlookにそのまま残っています。</p></div>`;
+}
+function vMail(){
+  const hq=myShop()==null, q=state.mailId?byId(state.mailId):null, all=scope().filter(x=>x.email), sel=q&&all.includes(q)?q:null, unm=state.mf==='unm'&&hq;
+  const nR=all.filter(x=>x.reply).length, nF=all.filter(fuDue).length, nU=UNM.filter(u=>!state.f.shop||u.shop===+state.f.shop).length;
+  const chip=(k,l,n)=>`<button class="chip" data-act="ml-f" data-k="${k}" aria-pressed="${state.mf===k}">${l}${n?` <b>${n}</b>`:''}</button>`;
+  return `<div class="vhead"><div><h1>メール<small>${hq?(state.f.shop?shopName(+state.f.shop):'全店舗'):shopName(myShop())}　お客様とのやり取りだけ</small></h1></div>
+    <div class="tools">${hq?`<select class="sel" data-ff="shop" aria-label="店舗">${opt('','全店舗',state.f.shop)}${SHOPS.map(s=>opt(s.id,s.name,state.f.shop)).join('')}</select>`:''}<div class="search">${IC.search}<input id="ml-q" placeholder="名前・アドレス・物件でさがす" value="${esc(state.mq)}" aria-label="さがす"></div></div></div>
+  ${unm?`<div class="mfilt card" style="margin-bottom:12px">${chip('all','すべて',all.length)}${chip('reply','返信あり',nR)}${chip('fu','追メ対象',nF)}${chip('unm','紐づかなかった',nU)}</div>${unmHTML()}`:
+  `<div class="mail${sel?' hasSel':''}">
+    <div class="card mlist"><div class="mfilt">${chip('all','すべて',all.length)}${chip('reply','返信あり',nR)}${chip('fu','追メ対象',nF)}${hq?chip('unm','紐づかなかった',nU):''}</div><div class="mitems" id="mlist">${mlistHTML()}</div></div>
+    <div class="card thread${sel?'':' noSel'}">${sel?threadHTML(sel):'左の一覧からお客様を選んでください'}</div>
+  </div>`}`;
+}
+function mlSend(){
+  const q=byId(state.mailId); if(!q)return; const d=state.mdraft&&state.mdraft.id===q.id?state.mdraft:mlDraft(q), me=ME(), who=me||d.who, sj=(d.s||'').trim(), b=(d.b||'').trim(), t=+(d.t||0);
+  if(!who){toast('送る人を選んでください');return} if(!sj||!b){toast('件名と本文を入れてください');return}
+  snap(q); q.acts.push({t:new Date(),k:'mail',who,text:t?'追メ（'+FOLLOW[t-1].label+'）　'+sj:sj,body:b,fu:t||undefined}); q.reply=false; if(q.stage===0)q.stage=1; if(q.stage<=1&&!openVisit(q)){q.due=addD(d0(),3);q.dueWhat=defNote('mail')}
+  queueMail(q,who,sj,b,t); state.mdraft=null; render(); const m=$('#msgs'); if(m)m.scrollTop=m.scrollHeight; toast(q.name+'様へのメールを送信待ちに入れ、記録しました',true);
+}
+function mlDraft(q){ if(!(state.mdraft&&state.mdraft.id===q.id)){const f=$('#ml-form');state.mdraft={id:q.id,t:f?$('#ml-t').value:'',s:f?$('#ml-s').value:'',b:f?$('#ml-b').value:'',who:null}} return state.mdraft }
+
+/* ---------- 数字 ---------- */
+function vNums(){
+  const since=Date.now()-30*DAY, sh=scopeShop(), hq=myShop()==null;
+  const all=scope(), rec=all.filter(q=>q.received>=since);
+  const fr=rec.filter(q=>q.media!=='電話').map(q=>{const a=q.acts.find(a=>CONTACT.includes(a.k));return a?(a.t-q.received)/MIN:null}).filter(v=>v!=null).sort((a,b)=>a-b);
+  const med=fr.length?fr[Math.floor(fr.length/2)]:null, vis=rec.filter(q=>q.visited).length, won=rec.filter(q=>q.stage===5&&!q.closed);
+  const wait=rec.filter(q=>q.stage===0&&!q.closed).length;
+  const rows=MEDIA.map(m=>{const L=rec.filter(q=>q.media===m);return {m,a:L.length,b:L.filter(q=>q.visited).length,c:L.filter(q=>q.stage===5&&!q.closed).length}}).filter(r=>r.a);
+  const mx=Math.max(1,...rows.map(r=>r.a)), pct=(x,y)=>y?Math.round(x/y*100)+'%':'—';
+  const bar=(r,k,cls,l)=>`<div class="barline" data-tip="${esc(r.m)}・${l} ${r[k]}件${k!=='a'?'（反響'+r.a+'件のうち'+pct(r[k],r.a)+'）':''}"><div class="bar ${cls}" style="width:${r[k]/mx*82}%"></div>${k==='a'?`<em>${r.a}件</em>`:''}</div>`;
+  const chart=rows.map(r=>`<div class="lab">${esc(r.m)}</div><div class="bars">${bar(r,'a','b1','反響')}${bar(r,'b','b2','来店')}${bar(r,'c','b3','成約')}</div>`).join('');
+  const staff=(sh==null?STAFF:staffOf(sh)).map(s=>{const touch=all.reduce((t,q)=>t+q.acts.filter(a=>a.who===s.id&&CONTACT.includes(a.k)&&a.t>=since).length,0);
+    const L=all.filter(q=>q.owner===s.id), w=L.filter(q=>q.stage===5&&!q.closed);
+    return `<tr><td>${esc(s.name)}${sh==null?`<span style="color:var(--muted);font-weight:400">　${shopName(s.shop)}</span>`:''}</td><td>${touch}</td><td>${L.filter(q=>q.visited).length}</td><td>${L.filter(q=>q.stage===4&&!q.closed).length}</td><td>${w.length}</td><td>${w.reduce((t,q)=>t+(q.amount||0),0)}</td></tr>`}).join('');
+  const crow=[...CLS,null].map(c=>{const L=rec.filter(q=>(q.cls||null)===c);return (c||L.length)?`<tr><td>${c||'未設定'}</td><td>${L.length}</td><td>${L.filter(q=>q.visited).length}</td><td>${L.filter(q=>q.stage===5&&!q.closed).length}</td></tr>`:''}).join('');
+  return `<div class="vhead"><div><h1>数字<small>${sh==null?'全店舗':shopName(sh)}　直近30日</small></h1></div>
+    ${hq?`<select class="sel" id="n-shop" data-ff="shop" aria-label="店舗">${opt('','全店舗',state.f.shop)}${SHOPS.map(s=>opt(s.id,s.name,state.f.shop)).join('')}</select>`:''}</div>
+  <div class="tiles">
+    <div class="card tile"><small>反響</small><b>${rec.length}<i>件</i></b><span>うち未対応 ${wait}件</span></div>
+    <div class="card tile"><small>最初の連絡まで（中央値）</small><b>${med==null?'—':elapsed(med*MIN)}</b><span>メール反響 ${fr.length}件で計算</span></div>
+    <div class="card tile"><small>来店率</small><b>${pct(vis,rec.length).replace('%','')}<i>%</i></b><span>${rec.length}件のうち ${vis}件・再来 ${rec.reduce((t,q)=>t+Math.max(0,doneVisits(q).length-1),0)}件</span></div>
+    <div class="card tile"><small>成約</small><b>${won.length}<i>件</i></b><span>売上 ${won.reduce((t,q)=>t+(q.amount||0),0)}万円</span></div>
+  </div>
+  <div class="two">
+    <div class="card panel"><h2>きっかけ別の進み方</h2>
+      <div class="legend" style="margin:0 0 12px"><span><i style="background:var(--c1)"></i>反響</span><span><i style="background:var(--c2)"></i>来店</span><span><i style="background:var(--c3)"></i>成約</span></div>
+      <div class="chart-rows">${chart}</div>
+      <div class="tblwrap" style="margin-top:16px"><table><thead><tr><th>きっかけ</th><th>反響</th><th>来店</th><th>成約</th><th>来店率</th><th>成約率</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.m)}</td><td>${r.a}</td><td>${r.b}</td><td>${r.c}</td><td>${pct(r.b,r.a)}</td><td>${pct(r.c,r.a)}</td></tr>`).join('')}</tbody></table></div></div>
+    <div style="display:flex;flex-direction:column;gap:22px;min-width:0"><div class="card panel"><h2>分類別</h2><div class="tblwrap"><table><thead><tr><th>分類</th><th>反響</th><th>来店</th><th>成約</th></tr></thead><tbody>${crow}</tbody></table></div></div>
+    <div class="card panel"><h2>人別</h2><p style="font-size:13px;color:var(--muted);margin-bottom:8px">連絡は記録した人、接客から先は担当で数えます。</p><div class="tblwrap"><table><thead><tr><th>名前</th><th>反響への連絡（回）</th><th>接客</th><th>申込中</th><th>成約</th><th>売上（万円）</th></tr></thead><tbody>${staff}</tbody></table></div></div></div>
+  </div>`;
+}
+
+/* ---------- お客様の画面 ---------- */
+function vCust(){
+  const q=byId(state.custId); if(!q){state.view=HOME;return viewHTML(HOME)}
+  const v=openVisit(q), r=reason(q), id=q.id;
+  const peeking=state.peek!=null&&(!!q.closed||state.peek!==q.stage), S=peeking?state.peek:q.stage;
+  const steps=STAGES.map((s,i)=>`<button data-act="peek" data-s="${i}" class="${i<q.stage?'past':i===q.stage?'cur':''}${peeking&&i===S?' peek':''}" ${i===q.stage&&!q.closed?'aria-current="step"':''} title="押すと画面だけ見られます">${s}</button>`).join('');
+  const peekbar=peeking?`<div class="peekbar" role="status"><span>「<b>${STAGES[S]}</b>」の画面を表示中。まだ「${q.closed?'終了（'+q.closed+'）':STAGES[q.stage]}」のままです。</span><span class="rowwrap" style="margin-top:0"><button class="btn primary" data-act="stage" data-s="${S}">「${STAGES[S]}」に変える</button><button class="btn" data-act="peek-x">やめる</button></span></div>`:'';
+  const flow=(peeking||!q.closed)&&S<5, sn=n=>flow?`<span class="stepn">${n}</span>`:'';
+  let next='';
+  if(q.closed) next=`<div class="card panel"><h2>終了（${q.closed}）</h2><div class="rowwrap"><button class="btn sm" data-act="reopen">再開する</button></div></div>`;
+  else if(q.stage===5) next=`<div class="card panel"><h2>成約</h2></div>`;
+  else{
+    const rp=q.reply?[...q.acts].reverse().find(a=>a.k==='reply'):null;
+    if(rp) next+=`<div class="card panel hot"><h2 class="st">${sn(1)}お客様から返信が来ています</h2><div class="quote">${esc(rp.text)}<small>${fmtDay(rp.t)} ${fmtT(rp.t)}・メール</small></div></div>`;
+    if(v){const past=v.at.getTime()+v.dur*MIN<Date.now();
+      next+=`<div class="card panel${past?' hot':''}"><h2 class="st">${rp?'':sn(1)}${past?'来店の結果を記録してください':'次は来店'}</h2><div class="nextline"><span>${fmtDay(v.at)} ${fmtT(v.at)}</span><span style="font-size:14px;font-weight:500">${fmtD(v.at)}・${v.dur}分</span></div>
+      
+      <div class="rowwrap"><button class="btn sm${v.confirmed?' on':''}" data-act="conf" data-id="${id}" aria-pressed="${v.confirmed}">${v.confirmed?'前日確認 済み':'前日確認をした'}</button><button class="btn sm" data-act="book" data-id="${id}">日時を変える</button></div></div>`}
+    else if(q.stage===0&&!rp){
+      next+=`<div class="card panel hot"><h2 class="st">${sn(1)}問い合わせの内容<span class="pill ${r.tone}">${r.label}</span></h2>
+      <div class="quote">${esc(q.msg||'（本文なし）')}<small>${q.property?'物件：'+esc(q.property)+'　':''}${fmtD(q.received)} ${fmtT(q.received)}・${esc(q.media)}</small></div></div>`}
+    else if(!rp){const hot=!q.due||(r&&r.key==='late');
+      next+=`<div class="card panel${hot?' hot':''}"><h2 class="st">${sn(1)}次にやること</h2><div class="nextline">${q.due?`<span>${fmtDay(q.due)}</span>`:`<span>決まっていません</span>`}${r&&r.key==='late'?`<span class="pill danger">${r.over}日超過</span>`:''}</div>
+      <div class="rowwrap"><input class="inp" id="f-what" data-f="dueWhat" value="${esc(q.dueWhat)}" placeholder="やること" maxlength="60"></div>
+      <div class="rowwrap">${[[0,'今日'],[1,'明日'],[3,'3日後'],[7,'1週間後']].map(([n,l])=>`<button class="btn sm" data-act="due" data-n="${n}">${l}</button>`).join('')}<input class="inp" style="width:auto" type="date" id="f-due" data-f="due" value="${q.due?iso(q.due):''}" aria-label="日付を指定"></div>
+      <div class="rowwrap"><button class="btn primary" data-act="book" data-id="${id}">来店を予約する</button></div></div>`}
+  }
+  const grp=(q.closed&&!peeking)?'pre':S<=2?'pre':S===3?'visited':S===4?'applied':'won';
+  const contactBody=`<div class="field"><span class="fl">電話</span><span>${q.tel?`<span class="val num telbig">${esc(q.tel)}</span><button class="copy" data-act="copy" data-t="${esc(q.tel)}">コピー</button>`:'なし'}</span></div>
+      <div class="field"><span class="fl">メール</span><span>${q.email?`<span class="val">${esc(q.email)}</span><button class="copy" data-act="copy" data-t="${esc(q.email)}">コピー</button>`:'なし'}</span></div>
+      ${q.email?`<div class="field"><span class="fl"></span><span class="rowwrap" style="margin-top:0"><button class="btn sm primary" data-act="mail-send" data-id="${id}">${IC.mailS}メールを送る</button>${fuNextStep(q)?`<button class="btn sm" data-act="fu-send" data-id="${id}">${FOLLOW[fuNextStep(q)-1].label}を送る</button>`:''}</span></div>`:''}
+      <div class="field ie"><span class="fl">いえらぶ</span>${q.ie?`<span class="rowwrap" style="margin-top:0"><button class="btn sm" data-act="ie-open" data-id="${id}">いえらぶで開く</button></span>`:`<span class="none-line" style="padding:0">未連携</span>`}</div>`;
+  const contact=`<div class="card panel"><h2 class="st">${sn(2)}連絡する</h2>${contactBody}</div>`;
+  const dvs=doneVisits(q);
+  const pastVisit=dvs.map((d,i)=>`<div class="field"><span class="fl">${i?'再来':'来店'}</span><span>${fmtD(d.at)} ${fmtT(d.at)}${d.staff?'・接客 '+esc(sname(d.staff)):''}</span></div>`).join('')+(q.visit&&q.visit.result&&q.visit.result!=='来店'?`<div class="field"><span class="fl">前回の予約</span><span>${fmtD(q.visit.at)} ${fmtT(q.visit.at)}・${q.visit.result}</span></div>`:'');
+  const others=q.ck?DB.filter(x=>x.ck===q.ck&&x.id!==q.id):[];
+  const wf=(k,l,ph)=>`<div class="field"><label for="f-${k}">${l}</label><input class="inp" id="f-${k}" data-f="wish.${k}" value="${esc(q.wish[k])}" placeholder="${ph}" maxlength="40"></div>`;
+  let tl='', lastDay='';
+  [...q.acts].sort((a,b)=>b.t-a.t).forEach(a=>{
+    const dk=fmtD(a.t); if(dk!==lastDay){tl+=`<div class="hist-day">${dayDiff(a.t)===0?'今日':dk}</div>`;lastDay=dk}
+    if(a.k==='sys') tl+=`<div class="sysline">${fmtT(a.t)}　${esc(a.text)}</div>`;
+    else if(a.k==='reply') tl+=`<div class="bub in"><span class="meta">${fmtT(a.t)}　お客様から返信（メール）・自動で取り込み</span>${esc(a.text)}</div>`;
+    else if(a.k==='in') tl+=`<div class="bub in"><span class="meta">${fmtT(a.t)}　お客様・${esc(q.media)}から問い合わせ${a.auto?'・メールから自動で取り込み':''}</span>${esc(a.text||'（本文なし）')}${q.property?`<br><span class="meta" style="margin-top:4px">物件：${esc(q.property)}</span>`:''}</div>`;
+    else tl+=`<div class="bub out${a.k==='tel_ng'?' ng':a.k==='memo'?' memo':''}"><span class="meta">${fmtT(a.t)}　${KIND[a.k]}${a.fu?'（'+FOLLOW[a.fu-1].label+'）':''}・${a.auto?'いえらぶの送信から自動記録':esc(sname(a.who))}</span>${esc(a.text)}</div>`;
+  });
+  /* 来店後に使う部品 */
+  const nC=q.acts.filter(a=>CONTACT.includes(a.k)).length, vDone=dvs[dvs.length-1]||null;
+  const sumline=`<div class="sumline">問い合わせ ${fmtD(q.received)}・${esc(q.media)}${q.property?'・'+esc(q.property):''}　／　連絡 ${nC}回${vDone?'　／　来店 '+(dvs.length>1?dvs.length+'回・直近 ':'')+fmtD(vDone.at)+' '+fmtT(vDone.at)+'（接客 '+esc(sname(vDone.staff||q.owner))+'）':q.owner?'　／　担当 '+esc(sname(q.owner)):''}</div>`;
+  const logCard=n=>`<div class="card panel"><h2 class="st">${n?sn(n):''}これまでのやり取り</h2>${sumline}${histHTML(q,true)}</div>`;
+  const vs=visOf(q), again=v&&v.again?v:null;
+  const recBlock=(lab,rc)=>`<div class="prevrec"><div><b>${lab}</b>${rc.result?`<span class="pill">${esc(rc.result)}</span>`:''}</div>${rc.props?`<div><span class="sub">案内した物件　</span>${esc(rc.props)}</div>`:''}${rc.note?`<div class="vnote">${esc(rc.note)}</div>`:''}</div>`;
+  const prevHTML=pastV(q).filter(p=>p.rec&&(p.rec.props||p.rec.note||p.rec.result)).map(p=>recBlock(fmtD(p.at)+' の来店',p.rec)).join('');
+  const afterRes=vs.result==='再来'?`<div class="field"><span class="fl">再来の日時</span><span class="rowwrap" style="margin-top:0">${again?`<b class="num">${fmtD(again.at)} ${fmtT(again.at)}</b><button class="btn sm" data-act="book" data-id="${id}">日時を変える</button>`:`<button class="btn primary sm" data-act="book" data-id="${id}">再来の日時を入れる</button>`}</span></div>`
+    :vs.result==='申込'?`<div class="field"><span class="fl">次へ</span><span class="rowwrap" style="margin-top:0"><button class="btn primary" data-act="stage" data-s="4">申込に進む</button></span></div>`
+    :vs.result==='見送り'?`<div class="field"><span class="fl">終える</span><span class="rowwrap" style="margin-top:0"><button class="btn sm" data-act="end" data-r="他決">他で決まった</button><button class="btn sm" data-act="end" data-r="見込みなし">見込みなし</button></span></div>`:'';
+  const visCard=n=>`<div class="card panel"><h2 class="st">${n?sn(n):''}来店の記録${dvs.length>=2?'（再来・'+dvs.length+'回目）':''}</h2>
+      <div class="field"><label for="f-vprops">案内した物件</label><input class="inp" id="f-vprops" data-f="vis.props" value="${esc(vs.props)}" placeholder="物件名" maxlength="80"></div>
+      <div class="field"><span class="fl">結果</span><span class="rowwrap" style="margin-top:0">${['申込','再来','検討中','見送り'].map(t=>`<button type="button" class="chip" data-act="vis-result" data-v="${t}" aria-pressed="${vs.result===t}">${t}</button>`).join('')}</span></div>
+      ${afterRes}
+      <div class="field" style="align-items:start"><label for="f-vnote">接客メモ</label><textarea class="inp" id="f-vnote" data-f="vis.note" placeholder="メモ" maxlength="600">${esc(vs.note)}</textarea></div>${prevHTML}</div>`;
+  const visRead=prevHTML||vs.props||vs.note||vs.result?`<div class="card panel"><h2>来店の記録</h2>${vs.props?`<div class="field"><span class="fl">案内した物件</span><span>${esc(vs.props)}</span></div>`:''}${vs.result?`<div class="field"><span class="fl">結果</span><span>${esc(vs.result)}</span></div>`:''}${vs.note?`<div class="field" style="align-items:start"><span class="fl">接客メモ</span><span class="vnote">${esc(vs.note)}</span></div>`:''}${prevHTML}</div>`:'';
+  const dueCard=(n,btn)=>{const hot=!q.due||(r&&r.key==='late');
+    return `<div class="card panel${hot?' hot':''}"><h2 class="st">${n?sn(n):''}次にやること</h2><div class="nextline">${q.due?`<span>${fmtDay(q.due)}</span>`:`<span>決まっていません</span>`}${r&&r.key==='late'?`<span class="pill danger">${r.over}日超過</span>`:''}</div>
+      <div class="rowwrap"><input class="inp" id="f-what" data-f="dueWhat" value="${esc(q.dueWhat)}" placeholder="やること" maxlength="60"></div>
+      <div class="rowwrap">${[[0,'今日'],[1,'明日'],[3,'3日後'],[7,'1週間後']].map(([d,l])=>`<button class="btn sm" data-act="due" data-n="${d}">${l}</button>`).join('')}<input class="inp" style="width:auto" type="date" id="f-due" data-f="due" value="${q.due?iso(q.due):''}" aria-label="日付を指定"></div>
+      ${btn?`<div class="rowwrap">${btn}</div>`:''}</div>`};
+  const visitCard=n=>{const past=v.at.getTime()+v.dur*MIN<Date.now(), w=v.again?'再来':'来店';
+    return `<div class="card panel${past?' hot':''}"><h2 class="st">${n?sn(n):''}${past?w+'の結果を記録してください':'次は'+w}</h2><div class="nextline"><span>${fmtDay(v.at)} ${fmtT(v.at)}</span><span style="font-size:14px;font-weight:500">${fmtD(v.at)}・${v.dur}分</span></div>
+      
+      <div class="rowwrap"><button class="btn sm${v.confirmed?' on':''}" data-act="conf" data-id="${id}" aria-pressed="${v.confirmed}">${v.confirmed?'前日確認 済み':'前日確認をした'}</button><button class="btn sm" data-act="book" data-id="${id}">日時を変える</button></div></div>`};
+  const ap=grp==='applied'||grp==='won'?appOf(q):null, tot=ap?appTotal(q):0;
+  const af=(k,l,ph,type)=>{const inp=`<input class="inp${type==='yen'?' num':''}" id="f-a-${k}" data-f="app.${k}" ${type==='date'?'type="date"':type==='yen'?'inputmode="numeric"':''} ${k==='bld'?'data-sug="1" autocomplete="off"':''} value="${esc(type==='yen'?yen(ap[k]):ap[k])}" placeholder="${ph||''}" maxlength="40">`;
+    return `<div class="field"><label for="f-a-${k}">${l}${k==='bld'?' '+ieLink(ap.bld):''}</label>${k==='bld'?sugWrap(inp):inp}</div>`};
+  const appCard=(n,won)=>`<div class="card panel"><h2 class="st">${n?sn(n):''}${won?'成約の内容':'申込の内容'}</h2>
+      <div class="fgrid">${af('bld','物件名','例：グランコート東十条')}${af('room','号室','例：402')}${af('rent','賃料（円）','例：108,000','yen')}${af('fee','管理費（円）','例：5,000','yen')}
+        ${af('applied','申込日','','date')}${af('movein',won?'入居日':'入居予定日','','date')}${af('contract',won?'契約日':'契約予定日','','date')}
+        <div class="field"><span class="fl">審査</span><span class="rowwrap" style="margin-top:0">${['審査中','承認','否決'].map(t=>`<button type="button" class="chip" data-act="app-screen" data-v="${t}" aria-pressed="${ap.screen===t}">${t}</button>`).join('')}</span></div>
+        ${af('comm','仲介手数料（円）','例：110,000','yen')}${af('ad','広告料（円）','例：50,000','yen')}</div>
+      <div class="ftotal"><span>売上見込み</span><b class="app-total">${tot?yen(tot)+'円':'未入力'}</b><small>仲介手数料＋広告料</small></div></div>`;
+  const pInfo=`<div class="card panel"><h2>基本情報</h2>
+        <div class="field"><span class="fl">受信</span><span>${fmtD(q.received)} ${fmtT(q.received)}・${esc(q.media)}</span></div>${pastVisit}
+        <div class="field"><label for="f-cls2">分類</label><select class="sel" id="f-cls2" data-f="cls">${opt('','未設定',q.cls??'')}${CLS.map(c=>opt(c,c,q.cls??'')).join('')}</select></div>
+        <div class="field"><label for="f-owner">担当</label><select class="sel" id="f-owner" data-f="owner"><option value="">未定</option>${staffOf(q.shop).map(s=>opt(s.id,s.name,q.owner??'')).join('')}</select></div>
+        ${ap?`<div class="field"><span class="fl">売上見込み</span><span class="app-total num">${tot?yen(tot)+'円':'未入力'}</span></div>`:`<div class="field"><label for="f-amount">想定売上（万円）</label><input class="inp num" id="f-amount" data-f="amount" inputmode="decimal" value="${q.amount??''}" placeholder="例：9"></div>`}</div>`;
+  const pWish=`<div class="card panel"><h2>希望条件</h2>${q.property?`<div class="field"><span class="fl">問い合わせ物件</span><span>${esc(q.property)} ${ieLink(q.property)}${bldInfo(q.property)}</span></div>`:''}
+        ${wf('area','エリア','例：赤羽駅 徒歩10分以内')}${wf('rent','家賃の上限（万円）','例：8.5')}${wf('layout','間取り','例：1LDK')}${wf('movein','入居時期','例：12月上旬')}</div>`;
+  const pContact=`<div class="card panel"><h2>連絡先</h2>${contactBody}</div>`;
+  const pOthers=others.length?`<div class="card panel"><h2>同じ人のほかの問い合わせ</h2>${others.map(o=>`<button class="other" data-act="open" data-id="${o.id}"><span>${fmtD(o.received)}・${esc(o.media)}</span><span class="pill">${o.closed?'終了（'+o.closed+'）':STAGES[o.stage]}</span></button>`).join('')}</div>`:'';
+  const pEnd=q.closed?'':`<div class="card panel"><h2>終了にする</h2><div class="rowwrap" style="margin-top:0"><button class="btn sm" data-act="end" data-r="他決">他で決まった</button><button class="btn sm" data-act="end" data-r="見込みなし">見込みなし</button></div></div>`;
+  let main, rest;
+  if(grp==='visited'){
+    main=logCard(1)+visCard(2)+(v?visitCard(3):dueCard(3,''))+recorder(q,'cust',S);
+    rest=pWish+pContact+pInfo+pOthers+pEnd;
+  }else if(grp==='applied'){
+    main=appCard(1,false)+(v?visitCard(2):dueCard(2,`<button class="btn primary" data-act="stage" data-s="5">成約にする</button><button class="btn" data-act="book" data-id="${id}">再来を予約する</button>`))+recorder(q,'cust',S)+logCard(0);
+    rest=pContact+pInfo+visRead+pWish+pOthers+pEnd;
+  }else if(grp==='won'){
+    main=appCard(0,true)+logCard(0)+recorder(q,'cust',S);
+    rest=pContact+pInfo+visRead+pWish+pOthers+pEnd;
+  }else{
+    main=next+contact+recorder(q,'cust',S)+`<h2 class="hist-h">これまでの経緯</h2><div class="hist">${tl}</div>`;
+    rest=pInfo+pWish+pOthers+pEnd;
+  }
+  return `<div class="chead"><button class="btn sm" data-act="back">${IC.back}一覧へ戻る</button><span class="av lg a${q.id%6}" aria-hidden="true">${esc(q.name[0])}</span><h1>${esc(q.name)}</h1><span class="kana">${esc(q.kana)}</span><span class="tag">${esc(q.media)}</span>${q.cls?`<span class="tag cls">${q.cls}</span>`:''}${tags(q)}${myShop()==null?`<span class="tag">${shopName(q.shop)}</span>`:''}${q.closed?`<span class="pill">終了（${q.closed}）</span>`:''}</div>
+  <div class="steps${q.closed?' closed':''}" aria-label="進み具合">${steps}</div>${peekbar}
+  <div class="cgrid${peeking?' peeking':''}" data-grp="${grp}" ${peeking?'inert':''}>
+    <div class="c-main">${main}</div>
+    <div class="c-rest">${rest}</div>
+  </div>`;
+}
+
+/* ---------- 小窓 ---------- */
+const overlay=$('#overlay'); let sheetOk=null, ownerThen=null, cpWho=null;
+/* 反響帳から送るメール。ひな型は店舗ごとに持つ想定（見本では共通） */
+const TPL={1:{s:'お問い合わせありがとうございます',b:'{name} 様\n\nこの度はお問い合わせいただき、ありがとうございます。\n{shop}の担当です。\n\nご希望のお部屋をご案内しますので、ご来店のご都合をお知らせください。\n\n{shop}'},
+  2:{s:'その後、お部屋探しはいかがでしょうか',b:'{name} 様\n\n先日はお問い合わせをいただき、ありがとうございました。\nその後、お部屋探しの状況はいかがでしょうか。\nご希望に近いお部屋が出ていますので、よろしければご案内します。\n\n{shop}'},
+  3:{s:'お部屋探しのご状況について',b:'{name} 様\n\nその後いかがでしょうか。\nお急ぎでなければ、条件に合うお部屋が出たときにご連絡します。\nご不要でしたら、その旨お知らせください。\n\n{shop}'}};
+function openCompose(q,step){
+  const me=ME(), fill=t=>t.replace(/\{name\}/g,q.name).replace(/\{shop\}/g,shopName(q.shop)), tp=step?TPL[step]:null; cpWho=null;
+  sheet((step?FOLLOW[step-1].label+'を送る':'メールを送る')+'　'+esc(q.name)+'様',`
+    <div class="f2"><label class="f">宛先<input class="inp" value="${esc(q.email)}" readonly></label><label class="f">差出人<input class="inp" value="${esc(shopName(q.shop))}のアドレス" readonly></label></div>
+    <label class="f">ひな型<select class="sel" id="cp-t">${opt('','使わない',step||'')}${FOLLOW.map((f,i)=>opt(i+1,f.label+'　'+TPL[i+1].s,step||'')).join('')}</select></label>
+    <label class="f">件名<input class="inp" id="cp-s" value="${esc(tp?fill(tp.s):'')}" maxlength="120"></label>
+    <label class="f">本文<textarea class="inp" id="cp-b" maxlength="4000">${esc(tp?fill(tp.b):'')}</textarea></label>
+    ${me?'':`<div class="f">送る人<div class="rowwrap" style="margin-top:0">${staffOf(q.shop).map(x=>`<button type="button" class="chip" data-act="cp-who" data-v="${x.id}" aria-pressed="false">${esc(x.name)}</button>`).join('')}</div></div>`}
+    <p class="mnote">送信は店舗アドレス名義。送った時点で記録されます。</p>`,
+    ()=>{const t=+$('#cp-t').value, sj=$('#cp-s').value.trim(), b=$('#cp-b').value.trim(), who=me||cpWho;
+      if(!who){toast('送る人を選んでください');return false} if(!sj||!b){toast('件名と本文を入れてください');return false}
+      snap(q); q.acts.push({t:new Date(),k:'mail',who,text:t?'追メ（'+FOLLOW[t-1].label+'）　'+sj:sj,body:b,fu:t||undefined}); q.reply=false; if(q.stage===0)q.stage=1; if(q.stage<=1&&!openVisit(q)){q.due=addD(d0(),3);q.dueWhat=defNote('mail')}
+      queueMail(q,who,sj,b,t); state.rec=null; state.recForm=null; render(); toast(q.name+'様へのメールを送信待ちに入れ、記録しました',true)},
+    '送信する',{wide:true});
+  $('#cp-t').addEventListener('change',e=>{const n=+e.target.value;if(n){$('#cp-s').value=fill(TPL[n].s);$('#cp-b').value=fill(TPL[n].b)}});
+}
+function sheet(title,body,ok,okLabel,opts={}){
+  overlay.innerHTML=`<form class="sheet${opts.wide?' wide':''}${opts.cls?' '+opts.cls:''}" id="sheetForm" novalidate><h2>${title}</h2>${body}<div class="sheet-foot">${opts.left||''}<button type="button" class="btn ghost" data-act="sheet-x">やめる</button>${okLabel?`<button class="btn primary" type="submit">${okLabel}</button>`:''}</div></form>`;
+  overlay.hidden=false; sheetOk=ok;
+  const f=overlay.querySelector('input,select,button.pick'); if(f)f.focus();
+}
+function closeSheet(){overlay.hidden=true;overlay.innerHTML='';sheetOk=null}
+function askOwner(q,then){
+  sheet(esc(q.name)+'様の担当を決める',`<p style="font-size:14px;color:var(--muted)">接客した人を選んでください。その人が担当になります。</p><div class="rowwrap">${staffOf(q.shop).map(s=>`<button type="button" class="btn pick" data-act="owner-pick" data-s="${s.id}">${esc(s.name)}</button>`).join('')}</div>`,null,null);
+  ownerThen=then;
+}
+const timeOpts=(cur,from=H0*60,to=H1*60-30)=>{let h='';for(let m=from;m<=to;m+=30){const t=Math.floor(m/60)+':'+p2(m%60);h+=`<option ${t===cur?'selected':''}>${t}</option>`}return h};
+function readBook(){
+  const d=$('#bk-d').value, t=$('#bk-t').value; if(!d)return null;
+  const [h,mi]=t.split(':').map(Number), w=ymd(d); w.setHours(h,mi,0,0);
+  return {when:w,dur:+$('#bk-u').value};
+}
+function slotCount(q,day,h){
+  const a=new Date(day).setHours(h,0,0,0), b=a+60*MIN;
+  return DB.filter(x=>x.shop===q.shop&&x.id!==q.id&&openVisit(x)&&x.visit.at.getTime()<b&&x.visit.at.getTime()+x.visit.dur*MIN>a).length;
+}
+function paintSlots(q){
+  const b=readBook(), box=$('#bk-slots'); if(!box)return;
+  const start=b&&dayDiff(b.when)>6?d0(b.when):d0(), days=[...Array(7)].map((_,i)=>addD(start,i));
+  let h='<span></span>'+[...Array(H1-H0)].map((_,i)=>`<span class="h">${H0+i}</span>`).join('');
+  days.forEach(d=>{h+=`<span class="d">${fmtD(d)}</span>`;
+    for(let x=H0;x<H1;x++){const n=slotCount(q,d,x), sel=b&&d0(b.when).getTime()===d.getTime()&&b.when.getHours()===x;
+      h+=`<button type="button" class="${n>=2?'n2':n===1?'n1':''}${sel?' sel':''}" data-act="pick-slot" data-d="${iso(d)}" data-h="${x}" aria-label="${fmtD(d)} ${x}時、来店予約 ${n}件">${n||''}</button>`}});
+  box.innerHTML=h;
+  const w=$('#bk-warn'), n=b?slotCount(q,d0(b.when),b.when.getHours()):0;
+  w.hidden=!n; if(n)w.textContent='この時間帯にはすでに'+n+'件の来店予約があります。接客できる人数を確認してください。';
+}
+function openBook(q){
+  const v=openVisit(q), base=v?v.at:at(1,11,0), du=v?v.dur:60;
+  sheet(esc(q.name)+'様の'+((v?v.again:doneVisits(q).length>0)?'再来の予約':'来店予約'),`
+    <div class="f4"><label class="f">日付<input class="inp" type="date" id="bk-d" value="${iso(base)}" min="${iso(d0())}" required></label>
+    <label class="f">時間<select class="sel" id="bk-t">${timeOpts(fmtT(base))}</select></label>
+    <label class="f">長さ<select class="sel" id="bk-u">${[30,60,90,120].map(n=>`<option value="${n}" ${n===du?'selected':''}>${n}分</option>`).join('')}</select></label>
+    <label class="f">分類<select class="sel" id="bk-c">${opt('','選ぶ',q.cls??'')}${CLS.map(c=>opt(c,c,q.cls??'')).join('')}</select></label></div>
+    <div class="f">1週間の予約状況<div class="slots" id="bk-slots"></div></div>
+    <div class="note" id="bk-warn" hidden></div>`,
+    ()=>{const b=readBook();if(!b){$('#bk-d').focus();return false}const c=$('#bk-c').value;if(!c){const w=$('#bk-warn');w.hidden=false;w.textContent='分類（TEL・MT・MM・NF・紹介）を選んでください。';$('#bk-c').focus();return false}book(q,b.when,b.dur,c)},'予約を入れる',{wide:true});
+  overlay.querySelector('form').addEventListener('change',()=>paintSlots(q));
+  overlay.dataset.q=q.id; paintSlots(q);
+}
+/* 追メ：送信はいえらぶで行い、実際に送られたメールの控えが届いた時点で自動で記録する。
+   見本では「いえらぶで追メを送ったことにする」でその動きを再現する。 */
+/* ---------- メールが届くとどうなるか（見本用。メールの書式は架空） ---------- */
+const MAILP={
+  mt:[['柚木 春香','ユズキ ハルカ','SUUMO','ハイツ赤羽台 203','1K','6.6','内見を希望します。平日の夕方でお願いします。','090-0000-4127','yuzuki@example.com'],
+      ['真柴 涼','マシバ リョウ','SUUMO','サンライズ十条 402','1DK','7.4','今週末に内見できますか。','090-0000-5830','mashiba@example.com']],
+  mm:[['水無瀬 亮','ミナセ リョウ',"HOME'S",'クレスト王子神谷 801','1LDK','10.2','まだ募集していますか。連絡はメールでお願いします。','','minase@example.com'],
+      ['久遠 さくら','クオン サクラ',"HOME'S",'メゾン東十条 105','2DK','9.8','ペットを飼えるか教えてください。','','kuon@example.com']]
+};
+const MAILTABS=[['mt','新しい反響（電話番号あり）'],['mm','新しい反響（電話番号なし）'],['reply','お客様からの返信'],['fu','いえらぶから送ったメール（併用中）']];
+function mailCase(k){
+  const shop=scopeShop()??1, sn=shopName(shop), to=sn+'の反響用アドレス';
+  if(k==='mt'||k==='mm'){
+    const p=MAILP[k][mailN[k]%MAILP[k].length], [name,kana,media,bld,lay,rent,msg,tel,email]=p, cls=autoCls(media,tel), prop=bld+'（'+lay+'・'+rent+'万円）';
+    const dup=findDup(shop,tel,email);
+    return {mail:{h:[['差出人',media+'（反響のお知らせ）'],['宛先',to],['件名','【'+media+'】お問い合わせがありました']],
+        body:'■ お問い合わせ物件\n物件名：'+bld+'\n間取り：'+lay+'　賃料：'+rent+'万円\n\n■ お客様の情報\nお名前：'+name+'\nフリガナ：'+kana+'\n電話番号：'+(tel||'（記入なし）')+'\nメール：'+email+'\n\n■ ご要望\n'+msg},
+      rows:[['店舗',sn,'宛先のアドレスで決まる'],['きっかけ',media,'差出人で見分ける'],['お名前',name+'（'+kana+'）','本文から読み取る'],['電話',tel||'なし','本文から読み取る'],['メール',email,'本文から読み取る'],['物件',prop,'本文から読み取る'],['問い合わせ内容',msg,'本文から読み取る'],
+        ['分類',cls,tel?'電話番号があるので MT':'電話番号がないので MM'],['状況','未対応','一覧のいちばん上に出る'],['担当','未定','来店したときに決まる'],['いえらぶ','自動でつながる','いえらぶから届く通知メールの顧客番号を読み取る。番号を手で入れる操作はない']].concat(dup?[['同じ人','あり（'+fmtD(dup.received)+'・'+dup.media+'）','電話かメールが同じなので、同じ人としてつなげる']]:[]),
+      ok:'反響帳に入れてみる',
+      apply(){const id=++uid, now=new Date(); let ck=null; if(dup){ck=dup.ck||('m'+dup.id);dup.ck=ck}
+        DB.push({id,shop,name,kana,media,cls,received:now,stage:0,owner:null,closed:null,tel,email,ie:true,property:prop,msg,wish:{area:'',rent:'',layout:'',movein:''},due:null,dueWhat:'',amount:null,visit:null,visited:false,ck,acts:[{t:now,k:'in',text:msg,auto:true}]});
+        mailN[k]++; state.undo=null; return {id,msg:'メールから取り込みました：'+name+'様（'+media+'・'+sn+'）。分類は '+cls+' で入りました'}}};
+  }
+  if(k==='reply'){
+    const L=scope().filter(q=>!q.closed&&q.stage===1&&q.email&&!q.reply&&!openVisit(q)), q=L.find(x=>fuDone(x)>0)||L[0];
+    if(!q) return {none:'返信の相手になるお客様がいません。「最初の状態に戻す」を押してから試してください。'};
+    const body=q.name+' です。\nご連絡ありがとうございます。\n今週の土曜の午後に内見できますか。';
+    return {mail:{h:[['差出人',q.name+'様（'+q.email+'）'],['宛先',shopName(q.shop)+'の反響用アドレス'],['件名','Re: お部屋探しの件']],body},
+      rows:[['どのお客様か',q.name+'様','差出人のメールアドレスが、反響帳のお客様と同じ'],['経緯に足すもの','お客様からの返信（本文つき）','メールの本文をそのまま入れる'],['一覧の表示','「お客様から返信あり」が出る','返事を記録するまで、要対応に入る'],['追メ','対象から外れる','返信が来た人には追メを送らない'],['状況','追客中のまま','変えない']],
+      ok:'反響帳に入れてみる',
+      apply(){snap(q); q.acts.push({t:new Date(),k:'reply',text:body.split('\n').slice(1).join(' '),auto:true}); q.reply=true; q.ie=true; return {id:q.id,msg:q.name+'様からの返信を取り込みました。要対応に入りました',undo:true}}};
+  }
+  const q=scope().filter(fuDue).sort((a,b)=>a.received-b.received)[0];
+  if(!q) return {none:'追メ対象のお客様がいません。「最初の状態に戻す」を押してから試してください。'};
+  const step=fuNextStep(q), lab=FOLLOW[step-1].label, sn2=shopName(q.shop);
+  return {mail:{h:[['差出人',sn2+'（いえらぶから送信）'],['宛先',q.name+'様（'+q.email+'）'],['Bcc','取り込み用アドレス（固定Bcc）'],['件名','その後、お部屋探しはいかがでしょうか']],
+      body:q.name+' 様\n\n先日はお問い合わせをいただき、ありがとうございました。\nその後、お部屋探しの状況はいかがでしょうか。\nご希望に近いお部屋が出ていますので、よろしければご案内します。\n\n'+sn2},
+    rows:[['どのお客様か',q.name+'様','宛先のメールアドレスが、反響帳のお客様と同じ'],['追メかどうか','追メ','ひな型に入れる目印で見分ける（目印はこれから決める）'],['何回目か',lab,'これまでに記録された追メが'+(step-1)+'回なので'],['経緯に足すもの','メール送信（'+lab+'）','送った時刻で、自動で記録する'],['記録した人','なし','写しからは店舗までしか分からない']],
+    note:'追メ以外のメールも、同じ方法で「メール送信」として自動で記録します。',
+    ok:'反響帳に入れてみる',
+    apply(){snap(q); q.acts.push({t:new Date(),k:'mail',who:null,auto:true,text:'追メ（'+lab+'）',fu:step}); if(q.stage===0)q.stage=1; return {id:q.id,msg:'いえらぶからの送信を検知：'+q.name+'様に追メ → '+lab+' を自動で記録しました',undo:true}}};
+}
+function openMailDemo(){
+  const c=mailCase(mailTab);
+  const tabs=`<div class="mailtabs" role="group" aria-label="メールの種類">${MAILTABS.map(([k,l])=>`<button type="button" class="chip" data-act="mail-tab" data-k="${k}" aria-pressed="${mailTab===k}">${l}</button>`).join('')}</div>`;
+  const body=c.none?`${tabs}<p class="note">${c.none}</p>`:`${tabs}
+    <div class="mailgrid">
+      <section class="mailbox"><h3>届いたメール<small>架空の見本</small></h3>
+        <dl class="mhead">${c.mail.h.map(([a,b])=>`<dt>${a}</dt><dd>${esc(b)}</dd>`).join('')}</dl><pre class="mbody">${esc(c.mail.body)}</pre></section>
+      <div class="mailarrow" aria-hidden="true">→</div>
+      <section class="mailout"><h3>反響帳に入る内容</h3>
+        ${c.rows.map(([a,b,w])=>`<div class="mrow"><span class="ml">${a}</span><b>${esc(b)}</b><small>${esc(w)}</small></div>`).join('')}</section>
+    </div>
+    <p class="mnote">メールの書式は架空です。</p>`;
+  sheet('メールが届くと、反響帳はこうなる',body,c.none?null:()=>{
+    const r=c.apply(); state.f=Object.assign(F0(),{shop:state.f.shop}); state.rec=null; state.recForm=null; state.flash=r.id;
+    state.view=HOME; state.custId=null; if(APP==='mail'){state.mailId=r.id;state.mf='all';state.mdraft=null} render(); window.scrollTo(0,0); toast(r.msg,!!r.undo);
+    const el=$('.lrow.flash'); if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});
+  },c.none?null:c.ok,{cls:'xwide'});
+}
+function openEnd(q){
+  sheet(esc(q.name)+'様を終了にする',`<p style="font-size:14px;color:var(--muted)">理由を選ぶと終了になります。あとから再開できます。</p><div class="rowwrap"><button type="button" class="btn pick" data-act="end-as" data-id="${q.id}" data-r="他決">他で決まった</button><button type="button" class="btn pick" data-act="end-as" data-id="${q.id}" data-r="見込みなし">見込みなし</button></div>`,null,null);
+}
+function findDup(shop,tel,mail){
+  const t=String(tel||'').replace(/\D/g,''), m=String(mail||'').trim().toLowerCase();
+  return DB.find(q=>q.shop===shop&&((t.length>=10&&q.tel.replace(/\D/g,'')===t)||(m&&q.email.toLowerCase()===m)))||null;
+}
+function openNew(pre={}){
+  const shop0=pre.shop??scopeShop()??1, me=ME(), hq=myShop()==null;
+  const whoOpts=s=>staffOf(s).map(x=>opt(x.id,x.name,me??'')).join('');
+  const media0=pre.cls==='紹介'?'紹介':(pre.cls==='MT'||pre.cls==='MM')?'SUUMO':'電話', cls0=pre.cls??'TEL';
+  sheet('問い合わせを登録',`
+    ${hq?`<label class="f">店舗<select class="sel" id="nw-shop">${SHOPS.map(s=>opt(s.id,s.name,shop0)).join('')}</select></label>`:''}
+    <label class="f">お名前<input class="inp" id="nw-name" required maxlength="40" placeholder="例：山田 花子"></label>
+    <div class="f2"><label class="f">電話番号<input class="inp" id="nw-tel" inputmode="tel" maxlength="20" placeholder="例：090-0000-0000"></label>
+    <label class="f">メール<input class="inp" id="nw-mail" type="email" maxlength="80"></label></div>
+    <div class="note" id="nw-dup" hidden></div>
+    <div class="f3"><label class="f">きっかけ<select class="sel" id="nw-media">${MEDIA.map(m=>opt(m,m,media0)).join('')}</select></label>
+    <label class="f">分類<select class="sel" id="nw-cls">${opt('','未設定',cls0)}${CLS.map(c=>opt(c,c,cls0)).join('')}</select></label>
+    <label class="f">受けた人<select class="sel" id="nw-who">${whoOpts(shop0)}</select></label></div>
+    <label class="f">物件（決まっていれば）${sugWrap('<input class="inp" id="nw-prop" data-sug="1" maxlength="60" autocomplete="off" placeholder="物件名か駅名を入れると候補が出ます">')}</label>
+    <label class="f">聞いた内容<input class="inp" id="nw-msg" maxlength="200" placeholder="例：駅に近い1Kを希望。来週に内見したい"></label>
+    <div class="f2"><label class="f">来店日（決まっていれば）<input class="inp" type="date" id="nw-vd" value="${pre.day?iso(pre.day):''}" min="${iso(d0())}"></label>
+    <label class="f">来店の時間<select class="sel" id="nw-vt">${timeOpts('11:00')}</select></label></div>`,
+    ()=>{
+      const shop=hq?+$('#nw-shop').value:shop0, name=$('#nw-name').value.trim(), tel=$('#nw-tel').value.trim(), mail=$('#nw-mail').value.trim();
+      const warn=m=>{const d=$('#nw-dup');d.hidden=false;d.textContent=m};
+      if(!name){$('#nw-name').focus();return false}
+      if(!tel&&!mail){warn('電話番号かメールのどちらかを入れてください。');$('#nw-tel').focus();return false}
+      const who=+$('#nw-who').value, media=$('#nw-media').value, msg=$('#nw-msg').value.trim(), cls=$('#nw-cls').value||null, vd=$('#nw-vd').value, dup=findDup(shop,tel,mail);
+      if(vd&&!cls){warn('来店予約を入れるときは、分類を選んでください。');$('#nw-cls').focus();return false}
+      let ck=null; if(dup){ck=dup.ck||('c'+dup.id);dup.ck=ck}
+      const q={id:newId(),shop,name,kana:'',media,cls,received:new Date(),stage:media==='電話'?1:0,owner:null,closed:null,tel,email:mail,property:$('#nw-prop').value.trim(),msg,wish:{area:'',rent:'',layout:'',movein:''},due:null,dueWhat:'',amount:null,visit:null,visited:false,ck,acts:[]};
+      q.acts.push({t:new Date(),k:'in',text:msg});
+      if(media==='電話')q.acts.push({t:new Date(),k:'tel_ok',who,text:'電話で受付'});
+      if(vd){const [h,mi]=$('#nw-vt').value.split(':').map(Number), w=ymd(vd); w.setHours(h,mi,0,0);
+        q.visit={at:w,dur:60,confirmed:false,result:null,staff:null}; q.stage=2; q.acts.push({t:new Date(),k:'sys',text:'来店予約 '+fmtD(w)+' '+fmtT(w)})}
+      DB.push(q);state.undo=null;openCust(q.id);toast(vd?'登録し、来店予約を入れました':'登録しました。次にやることを決めてください');
+    },'登録する');
+  const shopNow=()=>hq?+$('#nw-shop').value:shop0;
+  const chk=()=>{const d=findDup(shopNow(),$('#nw-tel').value,$('#nw-mail').value),el=$('#nw-dup');el.hidden=!d;if(d)el.textContent='同じ連絡先のお客様がいます：'+d.name+'様（'+fmtD(d.received)+'・'+d.media+'）。同じ人として記録をつなげます。'};
+  $('#nw-tel').addEventListener('input',chk);$('#nw-mail').addEventListener('input',chk);
+  let clsTouched=!!pre.cls; $('#nw-cls').addEventListener('change',()=>{clsTouched=true});
+  const auto=()=>{if(!clsTouched)$('#nw-cls').value=autoCls($('#nw-media').value,$('#nw-tel').value)};
+  $('#nw-media').addEventListener('change',auto);$('#nw-tel').addEventListener('input',auto);
+  if(hq)$('#nw-shop').addEventListener('change',()=>{$('#nw-who').innerHTML=whoOpts(shopNow());chk()});
+}
+function openTask(t,preset){
+  const shop=calShop(), isNew=!t, base=t?t.at:preset.at;
+  const cur=t||{staff:preset.staff,dur:60,title:''};
+  sheet(isNew?'予定を入れる':'予定を直す',`
+    <label class="f">内容<input class="inp" id="tk-title" required maxlength="40" value="${esc(cur.title)}" placeholder="例：鍵の受け取り、物件の下見"></label>
+    <div class="f2"><label class="f">だれの予定<select class="sel" id="tk-staff">${staffOf(shop).map(s=>opt(s.id,s.name,cur.staff)).join('')}</select></label>
+    <label class="f">日付<input class="inp" type="date" id="tk-d" value="${iso(base)}" required></label></div>
+    <div class="f2"><label class="f">開始<select class="sel" id="tk-t">${timeOpts(fmtT(base))}</select></label>
+    <label class="f">長さ<select class="sel" id="tk-u">${[30,60,90,120,180].map(n=>`<option value="${n}" ${n===cur.dur?'selected':''}>${n}分</option>`).join('')}</select></label></div>`,
+    ()=>{
+      const title=$('#tk-title').value.trim(), d=$('#tk-d').value; if(!title){$('#tk-title').focus();return false} if(!d){$('#tk-d').focus();return false}
+      const [h,mi]=$('#tk-t').value.split(':').map(Number), w=ymd(d); w.setHours(h,mi,0,0);
+      const staff=+$('#tk-staff').value, dur=+$('#tk-u').value;
+      if(isNew)TASKS.push({id:newId(),shop,staff,at:w,dur,title,done:false}); else Object.assign(t,{staff,at:w,dur,title});
+      state.calDay=d0(w);render();toast(isNew?'予定を入れました':'予定を直しました');
+    },isNew?'入れる':'直す',{left:isNew?'':`<button type="button" class="btn ghost left" data-act="task-del" data-id="${t.id}">この予定を消す</button>`});
+}
+
+/* ---------- 通知・補助 ---------- */
+const toastEl=$('#toast'); let toastT=0;
+function toast(msg,canUndo){
+  toastEl.innerHTML=`<span>${esc(msg)}</span>${canUndo&&state.undo?'<button data-act="undo">元に戻す</button>':''}`;
+  toastEl.hidden=false; clearTimeout(toastT); toastT=setTimeout(hideToast,7000);
+}
+function hideToast(){toastEl.hidden=true}
+/* ---------- 操作 ---------- */
+const cust=()=>byId(state.custId);
+const save=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const A={
+  tab:el=>go(el.dataset.v),
+  open:el=>openCust(+el.dataset.id),
+  back:()=>go(state.back||HOME),
+  preset:el=>{state.f.preset=el.dataset.p;state.rec=null;refreshList()},
+  att:()=>{state.f.att=!state.f.att;state.rec=null;refreshList()},
+  'fu-filter':()=>{state.f.fu=!state.f.fu;state.rec=null;refreshList()},
+  rec:el=>{const id=+el.dataset.id;state.rec=state.rec===id?null:id;state.recForm=null;refreshList();const i=$('#rf-text-list');if(i)i.focus({preventScroll:true})},
+  rf:el=>{const q=byId(+el.dataset.id),f=recForm(q),k=el.dataset.k,v=el.dataset.v;
+    if(k==='who')f.who=+v; else if(k==='k'){f.k=v;if(!f.touched)f.next=defNext(v)} else{f.next=v;f.touched=true}
+    if(state.view==='list')refreshList();else render()},
+  'rf-save':el=>saveRecord(byId(+el.dataset.id)),
+  'rf-x':()=>{state.rec=null;state.recForm=null;refreshList()},
+  conf:el=>{const q=byId(+el.dataset.id),v=openVisit(q);if(!v)return;snap(q);v.confirmed=!v.confirmed;if(v.confirmed)log(q,'sys','来店前の確認連絡をした');render();toast(q.name+'様：'+(v.confirmed?'確認済みにしました':'確認を取り消しました'),true)},
+  book:el=>openBook(byId(+el.dataset.id)),
+  'pick-slot':el=>{$('#bk-d').value=el.dataset.d;$('#bk-t').value=el.dataset.h+':00';paintSlots(byId(+overlay.dataset.q))},
+  stage:el=>setStage(cust(),+el.dataset.s),
+  'owner-pick':el=>{const f=ownerThen;ownerThen=null;closeSheet();if(f)f(+el.dataset.s)},
+  due:el=>{const q=cust();snap(q);q.due=addD(d0(),+el.dataset.n);const w=$('#f-what');if(w)q.dueWhat=w.value.trim();render();toast('次にやることを '+fmtDay(q.due)+' に入れました',true)},
+  end:el=>closeAs(cust(),el.dataset.r),
+  'end-as':el=>{const q=byId(+el.dataset.id);closeSheet();closeAs(q,el.dataset.r)},
+  reopen:()=>{const q=cust();snap(q);q.closed=null;log(q,'sys','再開');render();toast('再開しました',true)},
+  copy:el=>{const t=el.dataset.t;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('コピーしました：'+t)).catch(()=>{const s=el.previousElementSibling;if(s){const r=document.createRange();r.selectNodeContents(s);const g=getSelection();g.removeAllRanges();g.addRange(r)}toast('選択しました。コピーしてください')})},
+  'cal-mode':el=>{state.calMode=el.dataset.m;render()},
+  'cal-go':el=>{const n=+el.dataset.n;state.calDay=n?addD(state.calDay,n):d0();render()},
+  'cal-day':el=>{state.calDay=new Date(+el.dataset.d);state.calMode='day';render()},
+  'ie-prop':el=>{if(el.dataset.id){window.open('https://cloud.ielove.jp/rent/index/detail/id/'+encodeURIComponent(el.dataset.id)+'/','_blank','noopener');return}toast('この物件はいえらぶの物件番号が分からないので開けません')},
+  'prop-csv':()=>{const f=$('#prop-file');if(f)f.click()},
+  'prop-clear':()=>{if(!confirm('物件の候補を全部消します。よろしいですか'))return;PROPS=null;PROPS_AT=null;try{localStorage.removeItem('hk3-props')}catch(e){}render();SB.from('properties').delete().neq('ie_id',0).then(chk).then(()=>toast('物件の候補を消しました')).catch(fail)},
+  'sug-pick':el=>{const inp=document.getElementById(el.dataset.for);if(!inp)return;inp.value=inp.id==='f-a-bld'?el.dataset.n:el.dataset.v;inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}));$$('.sug').forEach(x=>{x.hidden=true});inp.focus()},
+  'task-new':el=>{const d=new Date(state.calDay);d.setHours(Math.min(Math.max(new Date().getHours()+1,H0),H1-1),0,0,0);openTask(null,{staff:+el.dataset.staff,at:d})},
+  'task-done':el=>{const t=TASKS.find(x=>x.id===+el.dataset.id);if(t){t.done=!t.done;render()}},
+  'task-del':el=>{TASKS=TASKS.filter(x=>x.id!==+el.dataset.id);closeSheet();render();toast('予定を消しました')},
+  new:()=>openNew(),
+  'visit-new':el=>openNew({cls:el.dataset.cls,day:state.calDay,shop:calShop()}),
+  'mail-demo':()=>{openMailDemo()},
+  'kpi-new':()=>{state.f.preset=state.f.preset==='new'?'all':'new';state.rec=null;refreshList()},
+  'ml-open':el=>{state.mailId=+el.dataset.id;state.mdraft=null;render();const m=$('#msgs');if(m)m.scrollTop=m.scrollHeight},
+  'ml-back':()=>{state.mailId=null;render()},
+  'ml-f':el=>{state.mf=el.dataset.k;render()},
+  'ml-who':el=>{const q=byId(state.mailId);if(!q)return;mlDraft(q).who=+el.dataset.v;$$('[data-act="ml-who"]').forEach(x=>x.setAttribute('aria-pressed',String(+x.dataset.v===+el.dataset.v)))},
+  'unm-drop':el=>{const id=+el.dataset.id;UNM=UNM.filter(u=>u.id!==id);render();toast('捨てました（Outlookには残っています）');SB.from('mail_inbox').update({status:'dropped'}).eq('id',id).then(chk).catch(fail)},
+  'unm-link':el=>{const u=UNM.find(x=>x.id===+el.dataset.id);if(!u)return;const L=DB.filter(q=>q.shop===u.shop&&!q.closed);
+    sheet('どのお客様のメールですか',`<p style="font-size:13.5px;color:var(--muted)">${esc(u.from)}「${esc(u.s)}」</p><div class="rowwrap">${L.map(q=>`<button type="button" class="btn pick" data-act="unm-pick" data-q="${q.id}" data-u="${u.id}">${esc(q.name)}<small style="margin-left:6px;color:var(--muted)">${esc(q.closed?'終了':STAGES[q.stage])}</small></button>`).join('')}</div>`,null,null)},
+  'unm-pick':el=>{const q=byId(+el.dataset.q), u=UNM.find(x=>x.id===+el.dataset.u);if(!q||!u)return;snap(q);q.acts.push({t:u.t,k:'reply',text:u.body});q.reply=true;if(!q.email)q.email=u.from;UNM=UNM.filter(x=>x!==u);SB.from('mail_inbox').update({status:'matched',customer_id:q.id,shop_id:q.shop}).eq('id',u.id).then(chk).catch(fail);closeSheet();state.mf='all';state.mailId=q.id;render();toast(q.name+'様に紐づけました。要対応に入ります',true)},
+  'today-visits':()=>{state.calDay=d0();state.calMode='day';go('cal')},
+  peek:el=>{const q=cust(),n=+el.dataset.s;state.peek=(n===q.stage&&!q.closed)?null:n;render()},
+  'peek-x':()=>{state.peek=null;render()},
+  'vis-result':el=>{const q=cust(),r=visOf(q),nv=r.result===el.dataset.v?'':el.dataset.v;r.result=nv;render();const ov=openVisit(q);if(nv==='再来'&&!(ov&&ov.again))openBook(q)},
+  'app-screen':el=>{const q=cust(),a=appOf(q),nv=a.screen===el.dataset.v?'':el.dataset.v;a.screen=nv;if(nv)log(q,'sys','審査を「'+nv+'」に変更');render()},
+  'hist-set':el=>{state.hist=el.dataset.v==='1';if(!state.hist)hOpen.clear();save('hk3-hist',state.hist?'1':'0');refreshList()},
+  'hist-row':el=>{const id=+el.dataset.id;if(hOpen.has(id))hOpen.delete(id);else hOpen.add(id);refreshList()},
+  'mail-send':el=>openCompose(byId(+el.dataset.id),0),
+  'fu-send':el=>{const q=byId(+el.dataset.id);openCompose(q,fuNextStep(q))},
+  'cp-who':el=>{cpWho=+el.dataset.v;$$('[data-act="cp-who"]',overlay).forEach(b=>b.setAttribute('aria-pressed',String(b===el)))},
+  'ie-open':el=>{const q=byId(+el.dataset.id);toast('いえらぶのお客様画面のURLはまだ設定されていません')},
+  'mail-tab':el=>{mailTab=el.dataset.k;openMailDemo()},
+  reset:()=>{DB=seed();hOpen.clear();mailN={mt:0,mm:0};Object.assign(state,{f:F0(),rec:null,recForm:null,undo:null,flash:null,calDay:d0(),calMode:'day'});go(HOME);toast('最初の状態に戻しました')},
+  undo:()=>undo(),
+  'sheet-x':()=>{ownerThen=null;closeSheet()}
+};
+let suppress=false, drag=null;
+document.addEventListener('click',e=>{
+  if(suppress){suppress=false;e.preventDefault();return}
+  if(!e.target.closest('.sugwrap'))$$('.sug').forEach(x=>{x.hidden=true});
+  const el=e.target.closest('[data-act]');
+  if(el&&A[el.dataset.act]){A[el.dataset.act](el,e);return}
+  if(e.target===overlay){A['sheet-x']();return}
+  /* 名前の行の空いたところを押したら、その時刻で予定を入れる */
+  if(e.target.classList&&e.target.classList.contains('addable')){
+    const row=e.target.closest('.trow'), x=e.clientX-e.target.getBoundingClientRect().left, m=H0*60+Math.floor(x/SLOT)*30;
+    const d=new Date(+row.dataset.day);d.setHours(Math.floor(m/60),m%60,0,0);openTask(null,{staff:+row.dataset.staff,at:d});
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!overlay.hidden)A['sheet-x']();
+  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('lrow')){e.preventDefault();openCust(+e.target.dataset.id)}
+});
+overlay.addEventListener('submit',e=>{e.preventDefault();if(sheetOk&&sheetOk()===false)return;closeSheet()});
+document.addEventListener('submit',e=>{if(e.target.id==='ml-form'){e.preventDefault();mlSend()}});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.sug){const box=t.parentElement.querySelector('.sug'), L=bldSug(t.value.split(/\s/)[0]);
+    if(box){box.innerHTML=L.map(b=>`<button type="button" class="sugi" data-act="sug-pick" data-for="${t.id}" data-v="${esc(sugValue(b))}" data-n="${esc(b.n)}"><span>${esc(b.n)}</span><small>${esc(sugLabel(b))}</small></button>`).join('');box.hidden=!L.length||(L.length===1&&t.value.trim()===sugValue(L[0]).trim())}}
+  if(t.id==='ml-q'){state.mq=t.value;const l=$('#mlist');if(l)l.innerHTML=mlistHTML();return}
+  if(t.id==='ml-s'||t.id==='ml-b'){const q=byId(state.mailId);if(q){const d=mlDraft(q);d[t.id==='ml-s'?'s':'b']=t.value}return}
+  if(t.dataset.ff==='q'){state.f.q=t.value;state.rec=null;refreshList();return}
+  if(t.dataset.rf&&state.recForm){state.recForm[t.dataset.rf]=t.value}
+});
+document.addEventListener('change',e=>{
+  const t=e.target, val=t.value;
+  if(t.id==='prop-file'){const f=t.files&&t.files[0];if(!f)return;f.arrayBuffer().then(async b=>{const r=importProps(b);if(r.err){toast('取り込めませんでした：'+r.err);return}render();toast('いえらぶの物件 '+r.n+'件を読みました。全店に配っています…');try{await syncProps();toast('いえらぶの物件 '+r.n+'件を全店の候補にしました')}catch(e){fail(e)}});return}
+  if(t.dataset.df==='look'){state.look=val;save('hk3-look',val);render();return}
+  if(t.dataset.cf==='shop'){state.calShop=+val;render();return}
+  if(t.id==='ml-t'){const q=byId(state.mailId);if(!q)return;const d=mlDraft(q),n=+val,fill=x=>x.replace(/\{name\}/g,q.name).replace(/\{shop\}/g,shopName(q.shop));d.t=val;if(n){d.s=fill(TPL[n].s);d.b=fill(TPL[n].b);$('#ml-s').value=d.s;$('#ml-b').value=d.b}$('#ml-form button[type="submit"]').textContent=n?FOLLOW[n-1].label+'として送る':'送信する';return}
+  const ff=t.dataset.ff;
+  if(ff&&ff!=='q'){state.f[ff]=val;state.rec=null;if(ff==='shop')state.f.owner='';render();return}
+  const f=t.dataset.f, q=cust(); if(!f||!q)return;
+  if(f==='cls'){snap(q);q.cls=val||null;log(q,'sys','分類を'+(q.cls||'未設定')+'に変更');render();toast('分類を'+(q.cls||'未設定')+'にしました',true);return}
+  if(f==='owner'){snap(q);q.owner=val?+val:null;log(q,'sys',q.owner?'担当を'+sname(q.owner)+'に変更':'担当を未定に戻した');state.recForm=null;render();toast(q.owner?'担当を'+sname(q.owner)+'にしました':'担当を未定に戻しました',true);return}
+  if(f==='due'){snap(q);q.due=val?ymd(val):null;const w=$('#f-what');if(w)q.dueWhat=w.value.trim();render();toast(q.due?'次にやることを '+fmtDay(q.due)+' に入れました':'日付を外しました',true);return}
+  if(f==='dueWhat'){q.dueWhat=val.trim();return}
+  if(f==='amount'){const n=parseFloat(val.replace(/[^\d.]/g,''));const nv=isNaN(n)?null:n;if(nv!==q.amount){log(q,'sys','想定売上を'+(q.amount==null?'未入力':q.amount+'万円')+'から'+(nv==null?'未入力':nv+'万円')+'に変更');q.amount=nv}return}
+  if(f.startsWith('wish.')){q.wish[f.slice(5)]=val.trim();return}
+  if(f.startsWith('vis.')){visOf(q)[f.slice(4)]=val.trim();return}
+  if(f.startsWith('app.')){const k=f.slice(4), a=appOf(q);
+    if(['rent','fee','comm','ad'].includes(k)){const n=parseInt(val.replace(/[^\d]/g,''),10);a[k]=isNaN(n)?'':n;t.value=yen(a[k])}else a[k]=val.trim();
+    if(k==='comm'||k==='ad'){const tot=appTotal(q), nv=tot?Math.round(tot/1000)/10:null;
+      if(nv!==q.amount){log(q,'sys','売上見込みを'+(q.amount==null?'未入力':q.amount+'万円')+'から'+(nv==null?'未入力':nv+'万円')+'に変更');q.amount=nv}
+      $$('.app-total').forEach(el=>{el.textContent=tot?yen(tot)+'円':'未入力'})}
+  }
+});
+
+/* カレンダーの札をつかんで動かす */
+view.addEventListener('pointerdown',e=>{
+  if(e.button!==0||e.target.closest('.tdone'))return;
+  const blk=e.target.closest('.tblk'); if(!blk)return;
+  drag={el:blk,kind:blk.dataset.kind,id:+blk.dataset.id,x:e.clientX,y:e.clientY,moved:false};
+});
+const rowAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.trow:not(.thead)'):null};
+window.addEventListener('pointermove',e=>{
+  const t=$('#tip'), tp=e.target.closest?e.target.closest('[data-tip]'):null;
+  if(tp&&!drag){t.textContent=tp.dataset.tip;t.hidden=false;const w=t.offsetWidth;t.style.left=Math.max(8,Math.min(window.innerWidth-w-8,e.clientX+12))+'px';t.style.top=(e.clientY+16)+'px'}else t.hidden=true;
+  if(!drag)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(!drag.moved){if(Math.hypot(dx,dy)<6)return;drag.moved=true;drag.el.classList.add('moving')}
+  e.preventDefault();
+  drag.el.style.transform=`translate(${dx}px,${dy}px)`;
+  $$('.trow.over').forEach(c=>c.classList.remove('over'));
+  const r=rowAt(e.clientX,e.clientY); if(r)r.classList.add('over');
+});
+function endDrag(e,cancel){
+  if(!drag)return; const d=drag; drag=null;
+  const row=d.moved&&!cancel?rowAt(e.clientX,e.clientY):null;
+  $$('.trow.over').forEach(c=>c.classList.remove('over'));
+  d.el.classList.remove('moving');
+  suppress=true;setTimeout(()=>{suppress=false},0);
+  if(!d.moved){if(d.kind==='visit')openCust(d.id);else{const t=TASKS.find(x=>x.id===d.id);if(t)openTask(t)}return}
+  if(cancel){render();return}
+  const shift=Math.round((e.clientX-d.x)/SLOT)*30;
+  const move=(old,dur)=>{let m=old.getHours()*60+old.getMinutes()+shift;m=Math.max(H0*60,Math.min(H1*60-dur,m));const w=row&&row.dataset.day?new Date(+row.dataset.day):d0(old);w.setHours(Math.floor(m/60),m%60,0,0);return w};
+  if(d.kind==='visit'){
+    const q=byId(d.id), v=q&&q.visit; if(!v){render();return}
+    const when=move(v.at,v.dur), nc=row&&row.dataset.cls!==undefined?(row.dataset.cls||null):(q.cls||null);
+    const tCh=when.getTime()!==v.at.getTime(), cCh=nc!==(q.cls||null);
+    if(!tCh&&!cCh){render();return}
+    if(v.result&&tCh){render();toast('結果を記録した来店は動かせません');return}
+    snap(q); const msg=[];
+    if(tCh){const old=fmtD(v.at)+' '+fmtT(v.at);v.at=when;log(q,'sys','来店予約を '+old+' から '+fmtD(when)+' '+fmtT(when)+' に変更');msg.push(fmtD(when)+' '+fmtT(when))}
+    if(cCh){log(q,'sys','分類を'+(q.cls||'未設定')+'から'+(nc||'未設定')+'に変更');q.cls=nc;msg.push('分類 '+(nc||'未設定'))}
+    render();toast(q.name+'様の来店を '+msg.join('・')+' に変えました',true);
+  }else{
+    const t=TASKS.find(x=>x.id===d.id); if(!t){render();return}
+    t.at=move(t.at,t.dur); if(row&&row.dataset.staff)t.staff=+row.dataset.staff;
+    render();toast('予定を '+fmtT(t.at)+'・'+sname(t.staff)+' に動かしました');
+  }
+}
+window.addEventListener('pointerup',e=>endDrag(e,false));
+window.addEventListener('pointercancel',e=>endDrag(e,true));
+
+let rsT=0;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(state.view==='cal'&&!drag&&overlay.hidden)render()},150)});
+
+/* ===================== 本番：Supabase 接続層 =====================
+   画面側は見本と同じ q（お客様）の形で動く。ここで DB の行 ⇄ q を変換し、
+   render のあとに差分だけ保存する。他の端末の変更は Realtime で受けて差し替える。 */
+const CFG=window.HK_CONFIG||{};
+const SB=window.supabase.createClient(CFG.url,CFG.key);
+const newId=()=>Date.now()*1000+Math.floor(Math.random()*1000);
+const chk=r=>{if(r&&r.error)throw r.error;return r};
+function fail(e){console.error(e);toast('保存できませんでした：'+((e&&e.message)||e)+'　通信を確認してもう一度操作してください')}
+const nz=v=>(v===''||v==null)?null:v;
+const nnum=v=>{if(v===''||v==null)return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(/[,，円]/g,''));return isFinite(n)?n:null};
+const dstr=v=>{if(!v)return '';if(v instanceof Date)return iso(v);return String(v).slice(0,10)};
+
+/* ---- 行 → q ---- */
+function qFromRows(c){
+  const acts=c.acts||[], visits=c.visits||[], app=Array.isArray(c.applications)?c.applications[0]:c.applications;
+  const q={id:c.id,shop:c.shop_id,name:c.name,kana:c.kana||'',media:c.media,received:new Date(c.received_at),stage:c.stage,owner:c.owner_id,closed:c.closed_reason,
+    cls:c.cls,tel:c.tel||'',email:c.email||'',property:c.property_text||'',propId:c.property_id,msg:c.message||'',wish:Object.assign({area:'',rent:'',layout:'',movein:''},c.wish||{}),
+    due:c.due_at?ymd(c.due_at):null,dueWhat:c.due_what||'',amount:c.amount_man==null?null:+c.amount_man,visit:null,visited:c.stage>=3,ck:c.dup_key,ie:!!c.ie_linked,vis:null,app:null,pv:[],acts:[],reply:!!c.reply_pending};
+  q.acts=acts.map(a=>({id:a.id,t:new Date(a.at),k:a.kind,who:a.staff_id,text:a.text||'',body:a.body||undefined,fu:a.fu_step||undefined,auto:a.auto||undefined})).sort((a,b)=>a.t-b.t);
+  const vs=visits.map(v=>({id:v.id,at:new Date(v.at),dur:v.dur_min,confirmed:!!v.confirmed,result:v.result,staff:v.staff_id,again:!!v.again,_r:{props:v.props||'',result:v.next_result||'',note:v.note||''}})).sort((a,b)=>a.id-b.id);
+  const has=r=>!!(r.props||r.result||r.note);
+  if(vs.length){const cur=vs.pop(); q.visit=cur; q.vis=has(cur._r)?cur._r:null; delete cur._r;
+    q.pv=vs.map(v=>{v.rec=has(v._r)?v._r:null;delete v._r;return v})}
+  if(app)q.app={bld:app.bld||'',room:app.room||'',rent:app.rent??'',fee:app.fee??'',applied:app.applied_on||'',movein:app.movein_on||'',contract:app.contract_on||'',comm:app.comm??'',ad:app.ad??'',screen:app.screen||''};
+  return q;
+}
+/* ---- q → 行 ---- */
+function rowsOf(q){
+  const cust={id:q.id,shop_id:q.shop,name:q.name,kana:q.kana||'',tel:q.tel||'',email:q.email||'',media:q.media,cls:q.cls||null,stage:q.stage,closed_reason:q.closed||null,owner_id:q.owner||null,
+    received_at:q.received.toISOString(),property_text:q.property||'',property_id:q.propId||null,message:q.msg||'',wish:q.wish||{},due_at:q.due?iso(q.due):null,due_what:q.dueWhat||'',
+    amount_man:nnum(q.amount),reply_pending:!!q.reply,dup_key:q.ck||null,ie_linked:!!q.ie};
+  const acts=q.acts.map(a=>{if(!a.id)a.id=newId();return {id:a.id,customer_id:q.id,at:a.t.toISOString(),kind:a.k,staff_id:a.who||null,text:a.text||'',body:a.body||null,fu_step:a.fu||null,auto:!!a.auto}});
+  const list=[...pastV(q).map(v=>[v,v.rec]),...(q.visit?[[q.visit,q.vis]]:[])];
+  const visits=list.map(([v,r])=>{if(!v.id)v.id=newId();return {id:v.id,customer_id:q.id,at:v.at.toISOString(),dur_min:v.dur,confirmed:!!v.confirmed,result:v.result||null,again:!!v.again,staff_id:v.staff||null,props:(r&&r.props)||'',note:(r&&r.note)||'',next_result:(r&&r.result)||null}});
+  const a=q.app, app=a?{customer_id:q.id,bld:a.bld||'',room:a.room||'',rent:nnum(a.rent),fee:nnum(a.fee),applied_on:nz(dstr(a.applied)),movein_on:nz(dstr(a.movein)),contract_on:nz(dstr(a.contract)),screen:nz(a.screen),comm:nnum(a.comm),ad:nnum(a.ad)}:null;
+  return {cust,acts,visits,app};
+}
+const taskRow=t=>{if(!t.id)t.id=newId();return {id:t.id,shop_id:t.shop,staff_id:t.staff,at:t.at.toISOString(),dur_min:t.dur,title:t.title,done:!!t.done}};
+
+/* ---- 差分保存 ---- */
+const shadow=new Map(), tshadow=new Map(), written=new Map();   // written: 自分が書いた直近の形（Realtime の跳ね返りを無視する）
+let saving=Promise.resolve();
+const remember=(id,j)=>{let a=written.get(id);if(!a){a=[];written.set(id,a)}a.push(j);if(a.length>6)a.shift()};
+function flush(){
+  const jobs=[];
+  for(const q of DB){const r=rowsOf(q), j=JSON.stringify(r), prev=shadow.get(q.id); if(j===prev)continue; const p=prev?JSON.parse(prev):null; shadow.set(q.id,j); remember(q.id,j); jobs.push(()=>saveQ(r,p).catch(e=>{shadow.delete(q.id);fail(e)}))}
+  for(const t of TASKS){const r=taskRow(t), j=JSON.stringify(r); if(tshadow.get(t.id)===j)continue; tshadow.set(t.id,j); remember('t'+t.id,j); jobs.push(()=>SB.from('tasks').upsert(r).then(chk).catch(e=>{tshadow.delete(t.id);fail(e)}))}
+  jobs.forEach(f=>{saving=saving.then(f)});
+}
+function diffRows(cur,old){const om=new Map((old||[]).map(x=>[x.id,JSON.stringify(x)]));const up=cur.filter(x=>om.get(x.id)!==JSON.stringify(x));const cm=new Set(cur.map(x=>x.id));const del=(old||[]).filter(x=>!cm.has(x.id)).map(x=>x.id);return {up,del}}
+async function saveQ(r,p){
+  if(!p||JSON.stringify(p.cust)!==JSON.stringify(r.cust)) chk(await SB.from('customers').upsert(r.cust));
+  const a=diffRows(r.acts,p&&p.acts); if(a.up.length) chk(await SB.from('acts').upsert(a.up)); if(a.del.length) chk(await SB.from('acts').delete().in('id',a.del));
+  const v=diffRows(r.visits,p&&p.visits); if(v.up.length) chk(await SB.from('visits').upsert(v.up)); if(v.del.length) chk(await SB.from('visits').delete().in('id',v.del));
+  if(r.app&&(!p||JSON.stringify(p.app)!==JSON.stringify(r.app))) chk(await SB.from('applications').upsert(r.app));
+  if(!r.app&&p&&p.app) chk(await SB.from('applications').delete().eq('customer_id',r.cust.id));
+}
+/* メールは送信待ちの表に積む（送る仕組みはサーバー側で別途） */
+function queueMail(q,who,subject,body,fu){
+  SB.from('mail_outbox').insert({customer_id:q.id,staff_id:who||null,shop_id:q.shop,to_addr:q.email,subject,body,fu_step:fu||null,status:'queued'}).then(chk).catch(fail);
+}
+/* いえらぶ物件CSV → properties を入れ替える */
+async function syncProps(){
+  const rows=(PROPS||[]).filter(p=>p.id).map(p=>({ie_id:+p.id,code:p.code||null,name:p.n,room:p.room||'',layout:p.layout||'',rent_man:p.rent===''?null:p.rent,station:p.st||'',walk_min:p.w||null,agent:p.agent||'',agent_tel:p.tel||'',synced_at:new Date().toISOString()}));
+  chk(await SB.from('properties').delete().neq('ie_id',0));
+  for(let i=0;i<rows.length;i+=500) chk(await SB.from('properties').insert(rows.slice(i,i+500)));
+}
+
+/* ---- 読み込み ---- */
+const SEL='*,acts(*),visits(*),applications(*)';
+async function loadAll(){
+  const [sh,st]=await Promise.all([SB.from('shops').select('*').eq('active',true).order('id'),SB.from('staff').select('*').eq('active',true).order('id')]);
+  chk(sh);chk(st);
+  SHOPS=(sh.data||[]).map(x=>({id:x.id,name:x.name,code:x.code,mail:x.mail_addr,closed:x.closed_dows||[]}));
+  STAFF=(st.data||[]).filter(x=>x.role!=='hq'&&!x.is_shared&&x.shop_id).map(x=>({id:x.id,name:x.name,shop:x.shop_id}));
+  const since=new Date(Date.now()-90*DAY).toISOString();
+  const cs=chk(await SB.from('customers').select(SEL).or(`closed_reason.is.null,updated_at.gte.${since}`).order('received_at',{ascending:false}).limit(3000));
+  DB=(cs.data||[]).map(qFromRows); shadow.clear(); DB.forEach(q=>shadow.set(q.id,JSON.stringify(rowsOf(q))));
+  const ts=chk(await SB.from('tasks').select('*').gte('at',new Date(Date.now()-7*DAY).toISOString()).lte('at',new Date(Date.now()+60*DAY).toISOString()));
+  TASKS=(ts.data||[]).map(t=>({id:t.id,shop:t.shop_id,staff:t.staff_id,at:new Date(t.at),dur:t.dur_min,title:t.title,done:!!t.done})); tshadow.clear(); TASKS.forEach(t=>tshadow.set(t.id,JSON.stringify(taskRow(t))));
+  const ps=chk(await SB.from('properties').select('*').limit(5000));
+  PROPS=(ps.data&&ps.data.length)?ps.data.map(p=>({id:String(p.ie_id),code:p.code||'',n:p.name,room:p.room||'',layout:p.layout||'',rent:p.rent_man==null?'':+p.rent_man,st:p.station||'',w:p.walk_min||0,agent:p.agent||'',tel:p.agent_tel||'',hp:p.hp_url})):null;
+  PROPS_AT=PROPS?new Date(Math.max(...ps.data.map(p=>+new Date(p.synced_at)))):null;
+  if(myShop()==null){const um=chk(await SB.from('mail_inbox').select('*').eq('status','unmatched').order('received_at',{ascending:false}).limit(100));
+    UNM=(um.data||[]).map(u=>({id:u.id,from:u.from_addr,s:u.subject||'',body:u.body||'',t:new Date(u.received_at),shop:u.shop_id}))}
+  if(myShop()!=null)state.calShop=myShop(); else if(SHOPS.length&&!SHOPS.some(x=>x.id===state.calShop))state.calShop=SHOPS[0].id;
+}
+/* ---- 他の端末の変更を受ける ---- */
+function subscribe(){
+  let pend=new Set(), t=0, taskT=0;
+  const kick=()=>{clearTimeout(t);t=setTimeout(()=>{const ids=[...pend];pend.clear();refetch(ids).catch(console.error)},400)};
+  const ch=SB.channel('hk-'+Math.random().toString(36).slice(2));
+  ['customers','acts','visits','applications'].forEach(tb=>ch.on('postgres_changes',{event:'*',schema:'public',table:tb},p=>{const r=(p.new&&Object.keys(p.new).length)?p.new:p.old;const id=tb==='customers'?r.id:r.customer_id;if(id!=null){pend.add(id);kick()}}));
+  ch.on('postgres_changes',{event:'*',schema:'public',table:'tasks'},()=>{clearTimeout(taskT);taskT=setTimeout(reloadTasks,400)});
+  ch.subscribe();
+}
+const busyEditing=id=>!overlay.hidden||drag||(state.custId===id&&(state.recForm||state.peek))||state.rec===id;
+async function refetch(ids){
+  if(!ids.length)return;
+  const r=chk(await SB.from('customers').select(SEL).in('id',ids));
+  const got=new Map((r.data||[]).map(c=>[c.id,c])); let changed=false, again=[];
+  for(const id of ids){
+    const c=got.get(id);
+    if(!c){const i=DB.findIndex(q=>q.id===id);if(i>=0&&!busyEditing(id)){DB.splice(i,1);shadow.delete(id);changed=true}continue}
+    const q=qFromRows(c), j=JSON.stringify(rowsOf(q));
+    if(shadow.get(id)===j||(written.get(id)||[]).includes(j))continue;
+    if(busyEditing(id)){again.push(id);continue}
+    const i=DB.findIndex(x=>x.id===id); if(i>=0)DB[i]=q; else DB.unshift(q);
+    shadow.set(id,j); changed=true;
+  }
+  if(again.length)setTimeout(()=>refetch(again).catch(console.error),3000);
+  if(changed){const ae=document.activeElement;if(!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))render()}
+}
+async function reloadTasks(){
+  const ts=chk(await SB.from('tasks').select('*').gte('at',new Date(Date.now()-7*DAY).toISOString()).lte('at',new Date(Date.now()+60*DAY).toISOString()));
+  const L=(ts.data||[]).map(t=>({id:t.id,shop:t.shop_id,staff:t.staff_id,at:new Date(t.at),dur:t.dur_min,title:t.title,done:!!t.done}));
+  const j=L.map(t=>JSON.stringify(taskRow(t))); let same=L.length===TASKS.length&&j.every((x,i)=>tshadow.get(L[i].id)===x);
+  if(same||drag||!overlay.hidden)return;
+  TASKS=L; tshadow.clear(); L.forEach((t,i)=>tshadow.set(t.id,j[i])); if(state.view==='cal')render();
+}
+
+/* ---- ログイン ---- */
+function showLogin(msg){
+  $('#ctx').innerHTML='';$('#nav').innerHTML='';$$('.demo-ctl').forEach(el=>{el.innerHTML=''});$$('.demo-m').forEach(el=>{el.hidden=true});
+  view.innerHTML=`<form class="card login" id="login" novalidate><h1><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="10" fill="var(--accent)"/><circle cx="10.2" cy="16" r="2.9" fill="#fff"/><path d="M15.6 10.4a8 8 0 0 1 0 11.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M20.6 6.6a13.4 13.4 0 0 1 0 18.8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/></svg>反響帳にログイン</h1>
+    <label>メールアドレス<input class="inp" id="lg-e" type="email" autocomplete="username" required></label>
+    <label>パスワード<input class="inp" id="lg-p" type="password" autocomplete="current-password" required></label>
+    <div class="err" id="lg-err">${msg||''}</div>
+    <button class="btn primary" type="submit" style="justify-content:center">ログイン</button></form>`;
+  const e=$('#lg-e'); if(e)e.focus();
+}
+async function doLogin(){
+  const email=$('#lg-e').value.trim(), password=$('#lg-p').value, b=$('#login button'); if(!email||!password)return;
+  b.disabled=true; const {error}=await SB.auth.signInWithPassword({email,password}); b.disabled=false;
+  if(error){$('#lg-err').textContent='ログインできませんでした。メールアドレスとパスワードを確認してください';return}
+  boot();
+}
+document.addEventListener('submit',e=>{if(e.target.id==='login'){e.preventDefault();doLogin()}});
+A.logout=async()=>{try{await SB.auth.signOut()}catch(e){}location.reload()};
+async function boot(){
+  view.innerHTML='<div class="loading">読み込んでいます…</div>';
+  let session=null; try{session=(await SB.auth.getSession()).data.session}catch(e){}
+  if(!session){showLogin();return}
+  authUser=session.user;
+  const st=await SB.from('staff').select('*').eq('auth_uid',authUser.id).eq('active',true).maybeSingle();
+  if(st.error||!st.data){console.error('staff lookup',st.error,authUser.id);view.innerHTML=`<div class="card login"><h1>${st.error?'読み込みエラー':'スタッフ登録がありません'}</h1><p style="font-size:14px;line-height:1.7">${st.error?esc(st.error.message||JSON.stringify(st.error)):'このログイン（'+esc(authUser.email)+'）はまだ反響帳のスタッフに紐づいていません。本部に連絡してください。'}</p><p class="mnote">ログインID：${esc(authUser.email)}<br>uid：${esc(authUser.id)}</p><button class="btn" data-act="reload">もう一度</button> <button class="btn ghost" data-act="logout">ログアウト</button></div>`;return}
+  MEROW=st.data;
+  try{await loadAll()}catch(e){console.error(e);view.innerHTML=`<div class="card login"><h1>読み込めませんでした</h1><p style="font-size:13.5px;color:var(--muted)">${esc((e&&e.message)||e)}</p><button class="btn" data-act="reload">もう一度</button> <button class="btn ghost" data-act="logout">ログアウト</button></div>`;return}
+  $$('.demo-m').forEach(el=>{el.hidden=false}); render(); subscribe();
+}
+A.reload=()=>location.reload();
+SB.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'){MEROW=null;authUser=null;showLogin()}});
+
+boot();
+setInterval(()=>{const ae=document.activeElement;if(!drag&&overlay.hidden&&state.rec==null&&state.view==='list'&&!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))refreshList()},60000);
+})();
+</script>
+
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body>
+</html>

@@ -598,7 +598,7 @@ const autoCls=(media,tel)=>media==='電話'?'TEL':media==='紹介'?'紹介':Stri
 /* 見本は1ページの中で #cal / #mail に切り替える（本番は別のURL）。別ファイル cal.html / mail.html で開いたときも同じ */
 const appFromLoc=()=>/cal\.html$/.test(location.pathname)||location.hash==='#cal'?'cal':/mail\.html$/.test(location.pathname)||location.hash==='#mail'?'mail':'hankyo';
 let APP=appFromLoc();
-const APPS={hankyo:{name:'反響帳',url:'#',views:['list','nums'],ic:'list'},cal:{name:'カレンダー',url:'#cal',views:['cal'],ic:'cal'},mail:{name:'メール',url:'#mail',views:['mail'],ic:'mailN'}};
+const APPS={hankyo:{name:'反響帳',url:'./',views:['list','nums'],ic:'list'},cal:{name:'カレンダー',url:'cal.html',views:['cal'],ic:'cal'},mail:{name:'メール',url:'mail.html',views:['mail'],ic:'mailN'}};
 let HOME=APPS[APP].views[0];
 let DB=[], TASKS=[], uid=0, tid=0, mailN={mt:0,mm:0}, mailTab='mt';
 /* Jinjer の打刻（見本は固定値。本番は Jinjer API から取り、カレンダーを開いたときに最新を読む） */
@@ -867,7 +867,7 @@ function renderSide(){
   $('#ctx').innerHTML=`<span class="av">${esc(r.label[0])}</span><span><b>${r.label}</b>${r.sub}</span>`;
   $('.bname').textContent=APPS[APP].name;
   $('#nav').innerHTML=TABS.map(([v,l,ic])=>`<button data-act="tab" data-v="${v}" ${cur===v?'aria-current="page"':''}>${ic}<span>${l}</span>${v==='list'&&n?`<span class="count" title="対応が必要な件数">${n}</span>`:''}</button>`).join('')
-    +`<div class="navlab" style="margin-top:14px">ほかのアプリ</div>`+Object.entries(APPS).filter(([k])=>k!==APP).map(([k,a])=>`<a href="${a.url}" title="${a.name}へ（本番は別のサイト。ログインは共通）">${IC[a.ic]}<span>${a.name}</span></a>`).join('');
+    +`<div class="navlab" style="margin-top:14px">ほかのアプリ</div>`+Object.entries(APPS).filter(([k])=>k!==APP).map(([k,a])=>`<a href="${a.url}" title="${a.name}を開く">${IC[a.ic]}<span>${a.name}</span></a>`).join('');
 }
 function render(){
   persist();
@@ -878,7 +878,7 @@ function render(){
   $$('.demo-ctl').forEach(el=>{el.innerHTML=demoCtl()});
 }
 const viewHTML=v=>v==='list'?vList():v==='cal'?vCal():v==='nums'?vNums():v==='mail'?vMail():vCust();
-function go(v){if(v!=='cust'&&!TABS.some(t=>t[0]===v)){const k=Object.keys(APPS).find(x=>APPS[x].views.includes(v));if(k){const keep={calDay:state.calDay,calMode:state.calMode};try{location.hash=APPS[k].url}catch(e){}setApp(k);Object.assign(state,keep);render()}return}
+function go(v){if(v!=='cust'&&!TABS.some(t=>t[0]===v)){const k=Object.keys(APPS).find(x=>APPS[x].views.includes(v));if(k){location.href=APPS[k].url}return}
   state.flash=null;state.peek=null;state.view=v;state.custId=null;state.rec=null;state.recForm=null;render();window.scrollTo(0,0)}
 function openCust(id){state.flash=null;state.peek=null;if(state.view!=='cust')state.back=state.view;state.view='cust';state.custId=id;state.rec=null;state.recForm=null;render();window.scrollTo(0,0)}
 const tags=q=>repeatN(q)>1?`<span class="pill accent">${repeatN(q)}回目</span>`:'';
@@ -1784,7 +1784,7 @@ async function boot(){
   if(!session){showLogin();return}
   authUser=session.user;
   const st=await SB.from('staff').select('*').eq('auth_uid',authUser.id).eq('active',true).maybeSingle();
-  if(st.error||!st.data){view.innerHTML=`<div class="card login"><h1>スタッフ登録がありません</h1><p style="font-size:14px;line-height:1.7">このログイン（${esc(authUser.email)}）はまだ反響帳のスタッフに紐づいていません。本部に連絡してください。</p><button class="btn" data-act="logout">ログアウト</button></div>`;return}
+  if(st.error||!st.data){console.error('staff lookup',st.error,authUser.id);view.innerHTML=`<div class="card login"><h1>${st.error?'読み込みエラー':'スタッフ登録がありません'}</h1><p style="font-size:14px;line-height:1.7">${st.error?esc(st.error.message||JSON.stringify(st.error)):'このログイン（'+esc(authUser.email)+'）はまだ反響帳のスタッフに紐づいていません。本部に連絡してください。'}</p><p class="mnote">ログインID：${esc(authUser.email)}<br>uid：${esc(authUser.id)}</p><button class="btn" data-act="reload">もう一度</button> <button class="btn ghost" data-act="logout">ログアウト</button></div>`;return}
   MEROW=st.data;
   try{await loadAll()}catch(e){console.error(e);view.innerHTML=`<div class="card login"><h1>読み込めませんでした</h1><p style="font-size:13.5px;color:var(--muted)">${esc((e&&e.message)||e)}</p><button class="btn" data-act="reload">もう一度</button> <button class="btn ghost" data-act="logout">ログアウト</button></div>`;return}
   $$('.demo-m').forEach(el=>{el.hidden=false}); render(); subscribe();
